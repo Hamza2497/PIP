@@ -33,7 +33,7 @@ def chat(body: ChatRequest):
 
     try:
         response = _client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=history,
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,
