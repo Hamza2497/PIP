@@ -57,7 +57,7 @@ async def chat_stream(body: ChatRequest):
         history.append(types.Content(role="user", parts=[types.Part(text=body.message)]))
 
         try:
-            stream = _client.models.generate_content_stream(
+            stream = _client.aio.models.generate_content_stream(
                 model="gemini-2.5-flash-lite",
                 contents=history,
                 config=types.GenerateContentConfig(
@@ -69,7 +69,7 @@ async def chat_stream(body: ChatRequest):
             return
 
         full_reply = []
-        for chunk in stream:
+        async for chunk in await stream:
             token = chunk.text
             if token:
                 full_reply.append(token)
