@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
@@ -47,3 +48,37 @@ def chat(body: ChatRequest):
     sessions[body.session_id] = history
 
     return ChatResponse(reply=reply_text, session_id=body.session_id)
+
+
+@router.post("/chat/stream")
+async def chat_stream(body: ChatRequest):
+    async def token_generator():
+        history = sessions.get(body.session_id, [])
+        history.append(types.Content(role="user", parts=[types.Part(text=body.message)]))
+
+        try:
+            stream = _client.models.generate_content_stream(
+                model="gemini-2.5-flash-lite",
+                contents=history,
+                config=types.GenerateContentConfig(
+                    system_instruction=_system_instruction,
+                ),
+            )
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
+            return
+
+        full_reply = []
+        for chunk in stream:
+            token = chunk.text
+            if token:
+                full_reply.append(token)
+                yield f"data: {token}\n\n"
+
+        assembled = "".join(full_reply)
+        history.append(types.Content(role="model", parts=[types.Part(text=assembled)]))
+        sessions[body.session_id] = history
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(token_generator(), media_type="text/event-stream")
