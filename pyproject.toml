@@ -9,6 +9,7 @@ dependencies = [
     "python-dotenv",
     "google-genai",
     "duckduckgo-search",
+    "httpx",
 ]
 
 [build-system]
