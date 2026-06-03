@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-from app.tools import WEB_SEARCH_TOOL, run_web_search, CALCULATOR_TOOL, run_calculator
+from app.tools import WEB_SEARCH_TOOL, run_web_search, CALCULATOR_TOOL, run_calculator, FETCH_TOOL, fetch_documentation
 
 load_dotenv()
 
@@ -98,7 +98,7 @@ async def chat_agent(body: ChatRequest):
                     contents=history,
                     config=types.GenerateContentConfig(
                         system_instruction=_system_instruction,
-                        tools=[WEB_SEARCH_TOOL, CALCULATOR_TOOL],
+                        tools=[WEB_SEARCH_TOOL, CALCULATOR_TOOL, FETCH_TOOL],
                     ),
                 )
             except Exception as e:
@@ -119,6 +119,8 @@ async def chat_agent(body: ChatRequest):
                 result = await run_web_search(fc.args.get("query", ""))
             elif fc.name == "calculator":
                 result = await run_calculator(fc.args.get("expression", ""))
+            elif fc.name == "fetch_documentation":
+                result = await fetch_documentation(fc.args.get("url", ""))
             else:
                 result = f"unknown tool: {fc.name}"
 
