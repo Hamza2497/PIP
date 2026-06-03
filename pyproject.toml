@@ -8,6 +8,7 @@ dependencies = [
     "pydantic",
     "python-dotenv",
     "google-genai",
+    "duckduckgo-search",
 ]
 
 [build-system]
