@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-from app.tools.search import WEB_SEARCH_TOOL, run_web_search
+from app.tools import WEB_SEARCH_TOOL, run_web_search, CALCULATOR_TOOL, run_calculator
 
 load_dotenv()
 
@@ -91,35 +91,40 @@ async def chat_agent(body: ChatRequest):
         history = sessions.get(body.session_id, [])
         history.append(types.Content(role="user", parts=[types.Part(text=body.message)]))
 
-        try:
-            response = await _client.aio.models.generate_content(
-                model="gemini-2.5-flash-lite",
-                contents=history,
-                config=types.GenerateContentConfig(
-                    system_instruction=_system_instruction,
-                    tools=[WEB_SEARCH_TOOL],
-                ),
-            )
-        except Exception as e:
-            yield f"data: ERROR: {e}\n\n"
-            return
+        for _ in range(5):
+            try:
+                response = await _client.aio.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=history,
+                    config=types.GenerateContentConfig(
+                        system_instruction=_system_instruction,
+                        tools=[WEB_SEARCH_TOOL, CALCULATOR_TOOL],
+                    ),
+                )
+            except Exception as e:
+                yield f"data: ERROR: {e}\n\n"
+                return
 
-        # Detect a function call in the first response
-        fc = None
-        if response.candidates:
-            for part in response.candidates[0].content.parts:
-                if part.function_call:
-                    fc = part.function_call
-                    break
+            fc = None
+            if response.candidates:
+                for part in response.candidates[0].content.parts:
+                    if part.function_call:
+                        fc = part.function_call
+                        break
 
-        if fc:
-            query = fc.args.get("query", "")
-            yield f"data: [TOOL_CALL] web_search: {query}\n\n"
+            if fc is None:
+                break
 
-            search_result = await run_web_search(query)
-            yield f"data: [TOOL_RESULT] {search_result[:200]}\n\n"
+            if fc.name == "web_search":
+                result = await run_web_search(fc.args.get("query", ""))
+            elif fc.name == "calculator":
+                result = await run_calculator(fc.args.get("expression", ""))
+            else:
+                result = f"unknown tool: {fc.name}"
 
-            # Preserve the model's function-call turn, then append the tool result
+            yield f"data: [TOOL_CALL] {fc.name}: {fc.args}\n\n"
+            yield f"data: [TOOL_RESULT] {result}\n\n"
+
             history.append(response.candidates[0].content)
             history.append(
                 types.Content(
@@ -128,42 +133,38 @@ async def chat_agent(body: ChatRequest):
                         types.Part(
                             function_response=types.FunctionResponse(
                                 name=fc.name,
-                                response={"result": search_result},
+                                response={"result": result},
                             )
                         )
                     ],
                 )
             )
-
-            # Stream the grounded final response
-            try:
-                stream = _client.aio.models.generate_content_stream(
-                    model="gemini-2.5-flash-lite",
-                    contents=history,
-                    config=types.GenerateContentConfig(
-                        system_instruction=_system_instruction,
-                    ),
-                )
-            except Exception as e:
-                yield f"data: ERROR: {e}\n\n"
-                return
-
-            full_reply = []
-            async for chunk in await stream:
-                token = chunk.text
-                if token:
-                    full_reply.append(token)
-                    yield f"data: {token}\n\n"
-
-            history.append(
-                types.Content(role="model", parts=[types.Part(text="".join(full_reply))])
-            )
         else:
-            # Model answered directly without invoking any tool
-            reply_text = response.text
-            yield f"data: {reply_text}\n\n"
-            history.append(types.Content(role="model", parts=[types.Part(text=reply_text)]))
+            yield "data: [ERROR] max tool iterations reached\n\n"
+            return
 
+        try:
+            stream = _client.aio.models.generate_content_stream(
+                model="gemini-2.5-flash-lite",
+                contents=history,
+                config=types.GenerateContentConfig(
+                    system_instruction=_system_instruction,
+                ),
+            )
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
+            return
+
+        full_reply = []
+        async for chunk in await stream:
+            token = chunk.text
+            if token:
+                full_reply.append(token)
+                yield f"data: {token}\n\n"
+
+        history.append(
+            types.Content(role="model", parts=[types.Part(text="".join(full_reply))])
+        )
         sessions[body.session_id] = history
         yield "data: [DONE]\n\n"
 
