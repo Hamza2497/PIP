@@ -12,6 +12,7 @@ dependencies = [
     "httpx",
     "asyncpg",
     "sqlalchemy[asyncio]",
+    "python-jose[cryptography]",
 ]
 
 [project.optional-dependencies]
