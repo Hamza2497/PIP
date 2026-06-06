@@ -10,6 +10,8 @@ dependencies = [
     "google-genai",
     "duckduckgo-search",
     "httpx",
+    "asyncpg",
+    "sqlalchemy[asyncio]",
 ]
 
 [build-system]
