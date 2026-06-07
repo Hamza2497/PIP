@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db_init import create_tables
-from app.routers import auth, chat, health, skills, stacks, users
+from app.routers import auth, chat, health, stacks, users
 
 
 @asynccontextmanager
@@ -27,5 +27,4 @@ app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(skills.router)
 app.include_router(stacks.router)

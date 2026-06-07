@@ -48,8 +48,6 @@ async def create_stack(
             select(Stack).where(Stack.user_id == user.id, Stack.name == body.name)
         )
         stack = result.scalar_one()
-    else:
-        await on_stack_added(stack, user.id, session)
 
     return {
         "id": str(stack.id),
