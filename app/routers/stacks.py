@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Stack, User
-from app.services.matching import on_stack_added
 from app.session import get_current_user
 
 router = APIRouter()
