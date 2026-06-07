@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Stack, User
+from app.services.matching import on_stack_added
 from app.session import get_current_user
 
 router = APIRouter()
@@ -48,6 +49,8 @@ async def create_stack(
             select(Stack).where(Stack.user_id == user.id, Stack.name == body.name)
         )
         stack = result.scalar_one()
+    else:
+        await on_stack_added(stack, user.id, session)
 
     return {
         "id": str(stack.id),

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Skill, User
+from app.services.matching import on_skill_added
 from app.session import get_current_user
 
 router = APIRouter()
@@ -49,6 +50,7 @@ async def create_skill(
     skill = Skill(user_id=user.id, name=body.name, confidence=body.confidence)
     session.add(skill)
     await session.commit()
+    await on_skill_added(skill, user.id, session)
     return {
         "id": str(skill.id),
         "name": skill.name,
