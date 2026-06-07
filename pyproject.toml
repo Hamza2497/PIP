@@ -13,6 +13,7 @@ dependencies = [
     "asyncpg",
     "sqlalchemy[asyncio]",
     "python-jose[cryptography]",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
