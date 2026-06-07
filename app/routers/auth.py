@@ -1,10 +1,11 @@
 from fastapi import APIRouter
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
 from app.auth import build_google_auth_url, exchange_code_for_user
 from app.database import AsyncSessionLocal
 from app.models import User
+from app.session import create_session_token
 
 router = APIRouter()
 
@@ -32,4 +33,14 @@ async def callback(code: str):
 
         await session.commit()
 
-        return {"status": "authenticated", "email": user.email}
+        token = create_session_token(str(user.id))
+
+        response = JSONResponse({"status": "authenticated", "email": user.email})
+        response.set_cookie(
+            "session",
+            token,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,
+        )
+        return response
