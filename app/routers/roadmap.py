@@ -4,7 +4,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from google.genai import types
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +13,8 @@ from app.enums import ConceptPhase
 from app.models import Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User
 from app.prompts import ROADMAP_SYSTEM_PROMPT
 from app.routers.chat import _client
+from app.services.concepts import get_or_create_concept
 from app.session import get_current_user
-from app.utils.embeddings import get_embedding
 from app.utils.graph import topological_sort
 
 router = APIRouter()
@@ -80,23 +80,13 @@ async def create_roadmap(
     name_to_concept: dict[str, Concept] = {}
     for concept_data in concepts_data:
         name = concept_data["name"]
-        result = await session.execute(
-            select(Concept).where(
-                Concept.stack_id == stack.id,
-                func.lower(Concept.name) == name.lower(),
-            )
+        concept = await get_or_create_concept(
+            session,
+            stack_id=stack.id,
+            name=name,
+            description=concept_data["description"],
+            domain=concept_data["domain"],
         )
-        concept = result.scalar_one_or_none()
-        if concept is None:
-            embedding = await get_embedding(concept_data["description"])
-            concept = Concept(
-                stack_id=stack.id,
-                name=name,
-                description=concept_data["description"],
-                description_embedding=embedding,
-                domain=concept_data["domain"],
-            )
-            session.add(concept)
         name_to_concept[name] = concept
 
     await session.flush()
