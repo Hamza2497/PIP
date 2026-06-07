@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.enums import ConceptPhase, ConceptStatus
 
 
 class User(Base):
@@ -56,4 +58,26 @@ class BuildJournal(Base):
     question: Mapped[str] = mapped_column(Text)
     user_answer: Mapped[str] = mapped_column(Text)
     pip_feedback: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    stack_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("stacks.id"), nullable=True)
+    plan: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String, default="active")
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+
+class ProjectConcept(Base):
+    __tablename__ = "project_concepts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("projects.id"), nullable=False)
+    concept_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer)
+    phase: Mapped[ConceptPhase] = mapped_column(SAEnum(ConceptPhase, name="conceptphase"), default=ConceptPhase.ORIENTING)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
