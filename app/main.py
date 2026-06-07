@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db_init import create_tables
-from app.routers import auth, chat, health
+from app.routers import auth, chat, health, users
 
 app = FastAPI(title="PIP")
 
@@ -22,3 +22,4 @@ async def startup() -> None:
 app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
+app.include_router(users.router)
