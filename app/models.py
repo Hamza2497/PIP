@@ -71,7 +71,7 @@ class Concept(Base):
     stack_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("stacks.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text)
-    description_embedding: Mapped[list[float]] = mapped_column(Vector(768), nullable=True)
+    description_embedding: Mapped[list[float]] = mapped_column(Vector(3072), nullable=True)
     domain: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 

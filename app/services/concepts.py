@@ -1,5 +1,5 @@
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import cast, select
+from sqlalchemy import Float, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Concept
@@ -18,7 +18,7 @@ async def get_or_create_concept(
 ) -> Concept:
     embedding = await get_embedding(description)
 
-    distance = Concept.description_embedding.op("<=>")(cast(embedding, Vector(768)))
+    distance = Concept.description_embedding.op("<=>", return_type=Float)(cast(embedding, Vector(3072)))
     result = await session.execute(
         select(Concept)
         .where(Concept.stack_id == stack_id, distance <= DISTANCE_THRESHOLD)

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls)",
+      "Bash(grep -rn \"except\\\\|pass$\\\\|return None\\\\|return {}\\\\|return Response\\\\|JSONResponse\" /Users/hamzahassaf/Desktop/Projects/PIP/app/utils/ /Users/hamzahassaf/Desktop/Projects/PIP/app/routers/chat.py /Users/hamzahassaf/Desktop/Projects/PIP/app/routers/checkpoint.py)",
+      "Bash(ps -p 72415 -o pid,command)",
+      "Bash(curl -s -i -X POST http://localhost:8000/roadmap -H 'Content-Type: application/json' -H 'Cookie: session=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmZGFkNzk0Yi0yZmE2LTQ3OTQtYTU5ZC1iMjc5MTRkZjI2OWYifQ.aT7dkGcVShb00_dBKUxaUAQ2Za3OhaFkgbI6bUQQfGY' -d '{\"plan\": \"Build a small REST API in Python with FastAPI and PostgreSQL, including auth and tests.\"}')",
+      "Bash(lsof -p 73139 2>/dev/null | grep -E \"REG|PIPE\" ; echo \"---\"; ls -la /tmp/*.log 2>/dev/null; find /Users/hamzahassaf/Desktop/Projects/PIP -name \"*.log\" 2>/dev/null)",
+      "Read(//private/tmp/**)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/private/tmp"
+    ]
+  }
+}
