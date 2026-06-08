@@ -4,7 +4,8 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from google.genai import types
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -95,21 +96,21 @@ async def create_roadmap(
 
     await session.flush()
 
-    # 6. Prerequisite wiring — replace the existing edges for these concepts with fresh ones.
-    concept_ids_all = [concept.id for concept in name_to_concept.values()]
-    await session.execute(
-        delete(ConceptPrerequisite).where(ConceptPrerequisite.concept_id.in_(concept_ids_all))
-    )
-
+    # 6. Prerequisite wiring — additive only, skip rows that already exist.
     prerequisites: list[tuple] = []
     for concept_data in concepts_data:
         concept = name_to_concept[concept_data["name"]]
-        for prerequisite_name in concept_data.get("prerequisites", []):
-            prerequisite = name_to_concept.get(prerequisite_name)
-            if prerequisite is None:
+        for prereq_name in concept_data.get("prerequisites", []):
+            prereq = name_to_concept.get(prereq_name)
+            if prereq is None:
                 continue
-            session.add(ConceptPrerequisite(concept_id=concept.id, prerequisite_id=prerequisite.id))
-            prerequisites.append((concept.id, prerequisite.id))
+            stmt = (
+                pg_insert(ConceptPrerequisite)
+                .values(concept_id=concept.id, prerequisite_id=prereq.id)
+                .on_conflict_do_nothing()
+            )
+            await session.execute(stmt)
+            prerequisites.append((concept.id, prereq.id))
 
     # 7. Topological sort.
     concept_ids = [concept.id for concept in name_to_concept.values()]
