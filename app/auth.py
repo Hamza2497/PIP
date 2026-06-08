@@ -53,4 +53,12 @@ async def exchange_code_for_user(code: str) -> dict:
         response.raise_for_status()
         id_token = response.json()["id_token"]
 
-    return jwt.decode(id_token, key="", options={"verify_signature": False})
+    return jwt.decode(
+    id_token,
+    key="",
+    options={
+        "verify_signature": False,
+        "verify_aud": False,
+        "verify_at_hash": False,
+    },
+    )
