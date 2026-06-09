@@ -126,6 +126,12 @@ export default function RoadmapView() {
       .finally(() => setLoading(false))
   }, [activeProjectId])
 
+  const handleMaster = useCallback(async (concept) => {
+    await api.masterConcept(activeProjectId, concept.id)
+    const updated = await api.getProject(activeProjectId)
+    setProject(updated)
+  }, [activeProjectId])
+
   if (loading) {
     return (
       <div style={{
@@ -160,12 +166,6 @@ export default function RoadmapView() {
     setActiveConcept(activeConcept)
     setActiveView("checkpoint")
   }
-
-  const handleMaster = useCallback(async (concept) => {
-    await api.masterConcept(activeProjectId, concept.id)
-    const updated = await api.getProject(activeProjectId)
-    setProject(updated)
-  }, [activeProjectId])
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"28px 24px" }}>
