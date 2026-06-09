@@ -4,7 +4,6 @@ import { drawEdges, drawNode } from './treeRenderer'
 import { api } from '../../api'
 
 const R = 18
-const ZOOM_MIN = 0.15
 const ZOOM_MAX = 3.0
 const EASE = 0.13
 
@@ -51,6 +50,7 @@ export function ConceptTree({ projectId, onNodeSelect }) {
     nodes: [], edges: [], stars: [],
     panX: 0, panY: 0, targetPanX: 0, targetPanY: 0,
     zoom: 1, targetZoom: 1,
+    fitZoom: 1,
     hovId: null, selId: null,
     isDrag: false, dragMoved: false,
     startX: 0, startY: 0, startPanX: 0, startPanY: 0,
@@ -68,7 +68,8 @@ export function ConceptTree({ projectId, onNodeSelect }) {
   const applyZoom = useCallback((factor, cx, cy) => {
     const s = stateRef.current
     cx ??= s.W / 2; cy ??= s.H / 2
-    const newZoom = Math.min(Math.max(s.targetZoom * factor, ZOOM_MIN), ZOOM_MAX)
+    const zoomMin = s.fitZoom * 0.8
+    const newZoom = Math.min(Math.max(s.targetZoom * factor, zoomMin), ZOOM_MAX)
     const ratio = newZoom / s.targetZoom
     s.targetPanX = cx - (cx - s.targetPanX) * ratio
     s.targetPanY = cy - (cy - s.targetPanY) * ratio
@@ -97,6 +98,7 @@ export function ConceptTree({ projectId, onNodeSelect }) {
         a: Math.random() * 0.08 + 0.025,
       }))
       const cam = fitCamera(s.nodes, s.W, s.H)
+      s.fitZoom = cam.zoom
       s.panX = cam.panX; s.panY = cam.panY; s.zoom = cam.zoom
       s.targetPanX = cam.panX; s.targetPanY = cam.panY; s.targetZoom = cam.zoom
     }).catch(console.error)
@@ -229,6 +231,8 @@ export function ConceptTree({ projectId, onNodeSelect }) {
     }
 
     const onPointerDown = e => {
+      // Let button clicks pass through uninterrupted
+      if (e.target.closest('button')) return
       const s = stateRef.current
       s.isDrag = true; s.dragMoved = false
       s.startX = e.clientX; s.startY = e.clientY
