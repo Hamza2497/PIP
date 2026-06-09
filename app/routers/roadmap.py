@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.enums import ConceptPhase
-from app.models import Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User
+from app.models import Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User, UserConcept
 from app.prompts import ROADMAP_SYSTEM_PROMPT
 from app.routers.chat import _client
 from app.services.concepts import get_or_create_concept
@@ -22,6 +22,127 @@ router = APIRouter()
 
 class RoadmapRequest(BaseModel):
     plan: str
+
+
+@router.get("/projects")
+async def get_projects(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    result = await session.execute(
+        select(Project, Stack)
+        .join(Stack, Stack.id == Project.stack_id)
+        .where(Project.user_id == user.id)
+        .order_by(Project.created_at.desc())
+    )
+    rows = result.all()
+
+    projects = []
+    for project, stack in rows:
+        result2 = await session.execute(
+            select(ProjectConcept).where(ProjectConcept.project_id == project.id)
+        )
+        pcs = result2.scalars().all()
+        total = len(pcs)
+        mastered = sum(1 for pc in pcs if pc.phase == ConceptPhase.COMPLETE)
+        projects.append({
+            "id": str(project.id),
+            "name": stack.name,
+            "status": project.status,
+            "total_concepts": total,
+            "mastered_concepts": mastered,
+            "created_at": project.created_at.isoformat(),
+        })
+
+    return projects
+
+
+@router.get("/project/{project_id}")
+async def get_project(
+    project_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    result = await session.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == user.id)
+    )
+    project = result.scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404)
+
+    result = await session.execute(select(Stack).where(Stack.id == project.stack_id))
+    stack = result.scalar_one()
+
+    result = await session.execute(
+        select(ProjectConcept)
+        .where(ProjectConcept.project_id == project.id)
+        .order_by(ProjectConcept.order_index)
+    )
+    project_concepts = result.scalars().all()
+
+    concept_ids = [pc.concept_id for pc in project_concepts]
+    result = await session.execute(select(Concept).where(Concept.id.in_(concept_ids)))
+    concepts_map = {c.id: c for c in result.scalars().all()}
+
+    result = await session.execute(
+        select(ConceptPrerequisite).where(ConceptPrerequisite.concept_id.in_(concept_ids))
+    )
+    prereq_rows = result.scalars().all()
+
+    concept_to_pc = {pc.concept_id: pc for pc in project_concepts}
+    pc_prereqs: dict[str, list[str]] = {}
+    for p in prereq_rows:
+        if p.prerequisite_id in concept_to_pc:
+            pc_id = str(concept_to_pc[p.concept_id].id)
+            prereq_pc_id = str(concept_to_pc[p.prerequisite_id].id)
+            pc_prereqs.setdefault(pc_id, []).append(prereq_pc_id)
+
+    complete_pc_ids = {str(pc.id) for pc in project_concepts if pc.phase == ConceptPhase.COMPLETE}
+
+    active_pc = None
+    for pc in project_concepts:
+        if pc.phase != ConceptPhase.COMPLETE:
+            active_pc = pc
+            break
+
+    def get_state(pc: ProjectConcept) -> str:
+        if pc.phase == ConceptPhase.COMPLETE:
+            return "mastered"
+        if pc == active_pc:
+            if pc.phase != ConceptPhase.ORIENTING:
+                return "in_progress"
+            return "active"
+        pc_id = str(pc.id)
+        for prereq_id in pc_prereqs.get(pc_id, []):
+            if prereq_id not in complete_pc_ids:
+                return "locked"
+        return "ready"
+
+    result = await session.execute(
+        select(UserConcept).where(
+            UserConcept.user_id == user.id,
+            UserConcept.concept_id.in_(concept_ids),
+        )
+    )
+    user_concepts = {uc.concept_id: uc for uc in result.scalars().all()}
+
+    return {
+        "id": str(project.id),
+        "name": stack.name,
+        "concepts": [
+            {
+                "id": str(pc.id),
+                "concept_id": str(pc.concept_id),
+                "label": concepts_map[pc.concept_id].name,
+                "state": get_state(pc),
+                "confidence": user_concepts[pc.concept_id].confidence if pc.concept_id in user_concepts else None,
+                "prereqs": pc_prereqs.get(str(pc.id), []),
+                "order_index": pc.order_index,
+                "phase": pc.phase.value,
+            }
+            for pc in project_concepts
+        ],
+    }
 
 
 def _parse_json(text: str) -> dict:

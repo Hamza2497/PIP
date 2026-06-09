@@ -5,3 +5,7 @@ python-dotenv
 google-genai
 duckduckgo-search
 httpx
+python-jose[cryptography]
+sqlalchemy[asyncio]
+asyncpg
+pgvector
