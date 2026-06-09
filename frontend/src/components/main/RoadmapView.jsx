@@ -149,11 +149,13 @@ export default function RoadmapView() {
 
   if (!project) return null
 
-  const activeConcept = project.concepts.find(c => c.state === "active")
+  const activeConcept = project.concepts.find(
+    c => c.state === "active" || c.state === "in_progress"
+  )
   const queue = project.concepts
-    .filter(c => c.state !== "active")
+    .filter(c => c.state !== "active" && c.state !== "in_progress")
     .sort((a, b) => {
-      const order = { ready:0, in_progress:1, mastered:2, locked:3 }
+      const order = { ready:0, mastered:1, locked:2 }
       return (order[a.state] ?? 9) - (order[b.state] ?? 9)
     })
 
@@ -245,7 +247,7 @@ export default function RoadmapView() {
               fontFamily:'"Fira Code",monospace',
               letterSpacing:"0.07em",
             }}>
-              UP NEXT
+              {activeConcept.state === "in_progress" ? "IN PROGRESS" : "UP NEXT"}
             </span>
           </div>
 
