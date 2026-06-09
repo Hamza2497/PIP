@@ -299,7 +299,7 @@ function CheckpointMessages({ messages, concept, sending, scrollRef, questionTex
 }
 
 // ── MainArea ──────────────────────────────────────────────────────────────────
-export default function MainArea() {
+export default function MainArea({ treeRef }) {
   const {
     activeProjectId, setActiveProjectId,
     projects, setProjects,
@@ -390,6 +390,7 @@ export default function MainArea() {
     if (!activeConcept) return
     setSending(true)
     setCurrentPhase("ORIENTING")
+    treeRef?.current?.setHoveredNode(activeConcept.id)
     try {
       const res = await api.orientStream(activeConcept.id)
       for await (const ev of parseSse(res)) {
@@ -450,14 +451,22 @@ export default function MainArea() {
     setSending(true)
     setMessages(m => [...m, { role: "user", content: ans }])
     try {
+      const stateFromScore = (confidence) => {
+        if (confidence >= 4) return 'mastered'
+        return 'in_progress'
+      }
       const res = await api.answerStream(activeConcept.id, questionText, ans)
       for await (const ev of parseSse(res)) {
         if (ev.type === "score") {
           setMessages(m => [...m, { role: "score", confidence: ev.confidence, feedback: ev.feedback }])
+          treeRef?.current?.updateNodeState(activeConcept.id, stateFromScore(ev.confidence))
         } else if (ev.type === "phase_change") {
           setCurrentPhase(ev.phase)
           setMessages(m => [...m, { role: "phase_change", phase: ev.phase }])
-          if (ev.phase === "COMPLETE") setRoadmapKey(k => k + 1)
+          if (ev.phase === "COMPLETE") {
+            setRoadmapKey(k => k + 1)
+            treeRef?.current?.setHoveredNode(null)
+          }
         }
       }
     } catch (err) {

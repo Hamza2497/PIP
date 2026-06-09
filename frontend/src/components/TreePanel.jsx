@@ -17,7 +17,7 @@ function IconPanelRight({ active }) {
   )
 }
 
-export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle }) {
+export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle, treeRef }) {
   const { activeProjectId } = useProject()
   const [selectedConcept, setSelectedConcept] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -104,6 +104,7 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
         {activeProjectId ? (
           <>
             <ConceptTree
+              ref={treeRef}
               projectId={activeProjectId}
               onNodeSelect={(node) => setSelectedConcept(node)}
               refreshKey={refreshKey}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { layoutTree } from '../../utils/treeLayout'
 import { drawEdges, drawNode } from './treeRenderer'
 import { api } from '../../api'
@@ -43,7 +43,7 @@ function ZoomBtn({ onClick, title, children }) {
   )
 }
 
-export function ConceptTree({ projectId, onNodeSelect, refreshKey }) {
+export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSelect, refreshKey }, ref) {
   const canvasRef  = useRef(null)
   const wrapRef    = useRef(null)
   const { dark }   = useTheme()
@@ -77,6 +77,16 @@ export function ConceptTree({ projectId, onNodeSelect, refreshKey }) {
     s.targetPanY = cy - (cy - s.targetPanY) * ratio
     s.targetZoom = newZoom
   }, [])
+
+  useImperativeHandle(ref, () => ({
+    updateNodeState(conceptId, newState) {
+      const node = stateRef.current.nodes.find(n => n.id === conceptId)
+      if (node) node.state = newState
+    },
+    setHoveredNode(conceptId) {
+      stateRef.current.hovId = conceptId ?? null
+    },
+  }))
 
   // Keep stateRef in sync with theme so the draw loop picks it up immediately
   useEffect(() => { stateRef.current.dark = dark }, [dark])
@@ -329,4 +339,4 @@ export function ConceptTree({ projectId, onNodeSelect, refreshKey }) {
       </div>
     </div>
   )
-}
+})

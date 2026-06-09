@@ -28,7 +28,8 @@
       "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"edtech learning SaaS dark dashboard concept tree AI tutor\" --design-system -p \"PIP - Personalised Interactive Pedagogy\")",
       "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark SaaS dashboard sidebar panel layout\" --domain ux -n 6)",
       "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"OLED dark minimal\" --domain style -n 4)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(xargs cat -n)"
     ],
     "additionalDirectories": [
       "/tmp",
