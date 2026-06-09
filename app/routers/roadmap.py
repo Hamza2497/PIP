@@ -2,13 +2,20 @@ import json
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from google.genai import types
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.agents.roadmap_agent import (
+    annotate_plan,
+    generate_concept_tree,
+    generate_mermaid,
+    identify_stacks,
+)
+from app.database import AsyncSessionLocal, get_db
 from app.enums import ConceptPhase
 from app.models import Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User, UserConcept
 from app.prompts import ROADMAP_SYSTEM_PROMPT
@@ -310,3 +317,164 @@ async def master_concept(
     pc.phase = ConceptPhase.COMPLETE
     await session.commit()
     return {"ok": True}
+
+
+class IdentifyStacksRequest(BaseModel):
+    plan: str
+
+
+class GenerateRoadmapRequest(BaseModel):
+    plan: str
+    project_name: str
+    confirmed_stacks: list[str]
+
+
+@router.post("/roadmap/identify-stacks")
+async def roadmap_identify_stacks(
+    body: IdentifyStacksRequest,
+    user: User = Depends(get_current_user),
+):
+    stacks = await identify_stacks(body.plan)
+    return {"stacks": stacks}
+
+
+@router.post("/roadmap/generate")
+async def roadmap_generate(
+    body: GenerateRoadmapRequest,
+    user: User = Depends(get_current_user),
+):
+    plan = body.plan
+    project_name = body.project_name
+    confirmed_stacks = body.confirmed_stacks
+    user_id = user.id
+
+    async def generate():
+        try:
+            async with AsyncSessionLocal() as session:
+                # 1. Upsert stacks
+                stack_records: dict[str, object] = {}
+                for stack_name in confirmed_stacks:
+                    result = await session.execute(
+                        select(Stack).where(
+                            Stack.user_id == user_id,
+                            func.lower(Stack.name) == stack_name.lower(),
+                        )
+                    )
+                    stack = result.scalar_one_or_none()
+                    if stack is None:
+                        stack = Stack(user_id=user_id, name=stack_name)
+                        session.add(stack)
+                        await session.flush()
+                    stack_records[stack_name] = stack
+
+                primary_stack_id = stack_records[confirmed_stacks[0]].id
+
+                # 2. Create project
+                project = Project(
+                    user_id=user_id,
+                    stack_id=primary_stack_id,
+                    name=project_name,
+                    plan=plan,
+                    status="active",
+                )
+                session.add(project)
+                await session.flush()
+
+                # 3. Generate concept trees
+                all_raw_concepts: list[tuple[str, dict]] = []
+                for stack_name in confirmed_stacks:
+                    yield f'data: {json.dumps({"type": "text", "content": f"Generating concept tree for {stack_name}..."})}\n\n'
+                    raw = await generate_concept_tree(stack_name, plan)
+                    all_raw_concepts.extend([(stack_name, c) for c in raw])
+
+                # 4. Embed + deduplicate
+                concept_id_map: dict[str, object] = {}  # name -> concept_id
+                prereq_pairs: list[tuple] = []  # (concept_id, prereq_id) tuples
+
+                for stack_name, raw_concept in all_raw_concepts:
+                    stack_id = stack_records[stack_name].id
+                    concept = await get_or_create_concept(
+                        session,
+                        stack_id=stack_id,
+                        name=raw_concept["name"],
+                        description=raw_concept["description"],
+                        domain=raw_concept.get("domain", ""),
+                    )
+                    await session.flush()
+                    concept_id_map[raw_concept["name"]] = concept.id
+
+                    yield f'data: {json.dumps({"type": "concept_added", "concept": {"name": raw_concept["name"], "domain": raw_concept.get("domain", "")}})}\n\n'
+
+                # Wire prerequisites (second pass so all concepts exist)
+                for stack_name, raw_concept in all_raw_concepts:
+                    concept_id = concept_id_map.get(raw_concept["name"])
+                    if concept_id is None:
+                        continue
+                    for prereq_name in raw_concept.get("prerequisites", []):
+                        prereq_id = concept_id_map.get(prereq_name)
+                        if prereq_id is None:
+                            continue
+                        stmt = (
+                            pg_insert(ConceptPrerequisite)
+                            .values(concept_id=concept_id, prerequisite_id=prereq_id)
+                            .on_conflict_do_nothing()
+                        )
+                        await session.execute(stmt)
+                        prereq_pairs.append((concept_id, prereq_id))
+
+                # 5-6. Topological sort
+                concept_ids = list(concept_id_map.values())
+                try:
+                    ordered_ids = topological_sort(concept_ids, prereq_pairs)
+                except ValueError as e:
+                    yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'
+                    return
+
+                # 7. Build id->name map for annotation
+                id_to_name = {v: k for k, v in concept_id_map.items()}
+                ordered_concepts_for_annotation = [
+                    {"name": id_to_name[oid]} for oid in ordered_ids
+                ]
+
+                # 8. Annotate plan
+                annotated = await annotate_plan(plan, ordered_concepts_for_annotation)
+                yield f'data: {json.dumps({"type": "plan_annotated", "parts": annotated})}\n\n'
+
+                # 9. Create project_concept records
+                order_index = 0
+                for step in annotated:
+                    for part in step.get("parts", []):
+                        concept_id = concept_id_map.get(part["concept_name"])
+                        if concept_id is None:
+                            continue
+                        session.add(
+                            ProjectConcept(
+                                project_id=project.id,
+                                concept_id=concept_id,
+                                order_index=order_index,
+                                what_to_build=part.get("what_to_build"),
+                                phase=ConceptPhase.PENDING,
+                            )
+                        )
+                        order_index += 1
+
+                await session.commit()
+
+                # 10. Mermaid diagram
+                name_to_prereq_names: dict[str, list[str]] = {}
+                for _, raw_concept in all_raw_concepts:
+                    name_to_prereq_names[raw_concept["name"]] = raw_concept.get("prerequisites", [])
+
+                mermaid_concepts = [
+                    {"name": name, "prerequisites": name_to_prereq_names.get(name, [])}
+                    for name in concept_id_map
+                ]
+                mermaid = await generate_mermaid(mermaid_concepts)
+                yield f'data: {json.dumps({"type": "mermaid", "diagram": mermaid})}\n\n'
+
+                yield f'data: {json.dumps({"type": "done"})}\n\n'
+
+        except Exception as e:
+            yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

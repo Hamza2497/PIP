@@ -2,12 +2,15 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from google.genai import types
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.agents.checkpoint_agent import generate_checkpoint, generate_orient, score_answer
+from app.database import AsyncSessionLocal, get_db
 from app.enums import ConceptPhase, ConceptStatus
 from app.models import BuildJournal, Concept, Project, ProjectConcept, User, UserConcept
 from app.prompts import CHECKPOINT_SYSTEM_PROMPT
@@ -149,3 +152,212 @@ async def checkpoint(
         "phase": new_phase.value,
         "concept_name": concept.name,
     }
+
+
+# ---------------------------------------------------------------------------
+# Step 9 endpoints
+# ---------------------------------------------------------------------------
+
+async def _get_project_concept_for_user(
+    project_concept_id: str,
+    user_id: object,
+    session: AsyncSession,
+):
+    result = await session.execute(
+        select(ProjectConcept).where(ProjectConcept.id == project_concept_id)
+    )
+    pc = result.scalar_one_or_none()
+    if pc is None:
+        raise HTTPException(status_code=404)
+
+    result = await session.execute(select(Project).where(Project.id == pc.project_id))
+    project = result.scalar_one()
+    if project.user_id != user_id:
+        raise HTTPException(status_code=403)
+
+    result = await session.execute(select(Concept).where(Concept.id == pc.concept_id))
+    concept = result.scalar_one()
+
+    return pc, project, concept
+
+
+@router.get("/checkpoint/orient/{project_concept_id}")
+async def orient(
+    project_concept_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    pc, project, concept = await _get_project_concept_for_user(project_concept_id, user.id, session)
+
+    if pc.phase != ConceptPhase.PENDING:
+        raise HTTPException(status_code=400, detail="already started")
+
+    pc.phase = ConceptPhase.ORIENTING
+    await session.commit()
+
+    pc_id = pc.id
+    project_id = project.id
+    concept_id = concept.id
+    concept_name = concept.name
+    concept_description = concept.description
+    what_to_build = pc.what_to_build or ""
+
+    async def stream():
+        full_text: list[str] = []
+        handoff_sentence = ""
+
+        async for chunk in generate_orient(concept_name, concept_description, what_to_build):
+            yield chunk
+            try:
+                data = json.loads(chunk[6:].strip())
+                if data["type"] == "text":
+                    full_text.append(data["content"])
+                elif data["type"] == "handoff":
+                    handoff_sentence = data["sentence"]
+                elif data["type"] == "done":
+                    async with AsyncSessionLocal() as gen_session:
+                        pc_obj = await gen_session.get(ProjectConcept, pc_id)
+                        pc_obj.phase = ConceptPhase.IN_PROGRESS
+                        gen_session.add(BuildJournal(
+                            project_id=project_id,
+                            concept_id=concept_id,
+                            phase=ConceptPhase.ORIENTING,
+                            content=json.dumps({
+                                "orient_text": "".join(full_text),
+                                "handoff_sentence": handoff_sentence,
+                            }),
+                        ))
+                        await gen_session.commit()
+            except Exception:
+                pass
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+class SubmitRequest(BaseModel):
+    claude_code_output: str
+
+
+@router.post("/checkpoint/submit/{project_concept_id}")
+async def submit(
+    project_concept_id: str,
+    body: SubmitRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    pc, project, concept = await _get_project_concept_for_user(project_concept_id, user.id, session)
+
+    if pc.phase != ConceptPhase.IN_PROGRESS:
+        raise HTTPException(status_code=400, detail="not in progress")
+
+    pc.phase = ConceptPhase.CHECKPOINTING
+    await session.commit()
+
+    pc_id = pc.id
+    project_id = project.id
+    concept_id = concept.id
+    concept_name = concept.name
+    concept_description = concept.description
+    claude_code_output = body.claude_code_output
+
+    async def stream():
+        yield f'data: {json.dumps({"type": "phase_change", "phase": "CHECKPOINTING"})}\n\n'
+
+        full_text: list[str] = []
+        question_text = ""
+
+        async for chunk in generate_checkpoint(concept_name, concept_description, claude_code_output):
+            yield chunk
+            try:
+                data = json.loads(chunk[6:].strip())
+                if data["type"] == "text":
+                    full_text.append(data["content"])
+                elif data["type"] == "question":
+                    question_text = data["text"]
+                elif data["type"] == "done":
+                    async with AsyncSessionLocal() as gen_session:
+                        gen_session.add(BuildJournal(
+                            project_id=project_id,
+                            concept_id=concept_id,
+                            phase=ConceptPhase.CHECKPOINTING,
+                            content=json.dumps({
+                                "claude_code_output": claude_code_output,
+                                "teaching_note": "".join(full_text),
+                                "question": question_text,
+                            }),
+                        ))
+                        await gen_session.commit()
+            except Exception:
+                pass
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+class AnswerRequest(BaseModel):
+    question: str
+    answer: str
+
+
+@router.post("/checkpoint/answer/{project_concept_id}")
+async def answer(
+    project_concept_id: str,
+    body: AnswerRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    pc, project, concept = await _get_project_concept_for_user(project_concept_id, user.id, session)
+
+    if pc.phase != ConceptPhase.CHECKPOINTING:
+        raise HTTPException(status_code=400, detail="not in checkpointing")
+
+    result_data = await score_answer(concept.name, body.question, body.answer)
+    score = result_data["score"]
+    feedback = result_data["feedback"]
+
+    # Upsert user_concepts
+    result = await session.execute(
+        select(UserConcept).where(
+            UserConcept.user_id == user.id,
+            UserConcept.concept_id == concept.id,
+        )
+    )
+    user_concept = result.scalar_one_or_none()
+
+    if user_concept is None:
+        new_confidence = score
+        user_concept = UserConcept(
+            user_id=user.id,
+            concept_id=concept.id,
+            confidence=new_confidence,
+        )
+        session.add(user_concept)
+    else:
+        new_confidence = round((user_concept.confidence * 1 + score * 2) / 3)
+        user_concept.confidence = new_confidence
+
+    user_concept.status = (
+        ConceptStatus.MASTERED if new_confidence >= 4 else ConceptStatus.IN_PROGRESS
+    )
+    user_concept.last_updated = datetime.now(timezone.utc)
+
+    # Update phase and write journal
+    pc.phase = ConceptPhase.COMPLETE
+    session.add(BuildJournal(
+        project_id=project.id,
+        concept_id=concept.id,
+        phase=ConceptPhase.COMPLETE,
+        content=json.dumps({
+            "question": body.question,
+            "answer": body.answer,
+            "score": score,
+            "feedback": feedback,
+        }),
+    ))
+    await session.commit()
+
+    async def stream():
+        yield f'data: {json.dumps({"type": "score", "confidence": score, "feedback": feedback})}\n\n'
+        yield f'data: {json.dumps({"type": "phase_change", "phase": "COMPLETE"})}\n\n'
+        yield f'data: {json.dumps({"type": "done"})}\n\n'
+
+    return StreamingResponse(stream(), media_type="text/event-stream")

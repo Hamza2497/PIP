@@ -48,6 +48,7 @@ class Project(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     stack_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("stacks.id"), nullable=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
     plan: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String, default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -60,7 +61,8 @@ class ProjectConcept(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("projects.id"), nullable=False)
     concept_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer)
-    phase: Mapped[ConceptPhase] = mapped_column(SAEnum(ConceptPhase, name="conceptphase"), default=ConceptPhase.ORIENTING)
+    phase: Mapped[ConceptPhase] = mapped_column(SAEnum(ConceptPhase, name="conceptphase"), default=ConceptPhase.PENDING)
+    what_to_build: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
