@@ -31,11 +31,6 @@ Your job:
    they are specifically building - not in general, for THIS project.
 2. Name one thing that trips developers up the first time they encounter it.
 3. Do not quiz. Do not ask questions. Practical, not academic.
-
-After your orient text, on its own line, write exactly:
-HANDOFF: List everything we just built related to {concept_name}: what was
-implemented, what patterns were used, and any decisions made - facts only,
-no explanations.
 """
 
     stream = _client.aio.models.generate_content_stream(
@@ -44,21 +39,17 @@ no explanations.
         config=types.GenerateContentConfig(system_instruction=system),
     )
 
-    full_text = []
     async for chunk in await stream:
         token = chunk.text
         if token:
-            full_text.append(token)
             yield f'data: {json.dumps({"type": "text", "content": token})}\n\n'
 
-    accumulated = "".join(full_text)
-    handoff_sentence = ""
-    for line in accumulated.splitlines():
-        if line.startswith("HANDOFF:"):
-            handoff_sentence = line[len("HANDOFF:"):].strip()
-            break
-
-    yield f'data: {json.dumps({"type": "handoff", "sentence": handoff_sentence})}\n\n'
+    handoff = (
+        f"List everything we just built related to {concept_name}: "
+        f"what was implemented, what patterns were used, and any decisions made "
+        f"— facts only, no explanations."
+    )
+    yield f'data: {json.dumps({"type": "handoff", "sentence": handoff})}\n\n'
     yield f'data: {json.dumps({"type": "done"})}\n\n'
 
 
