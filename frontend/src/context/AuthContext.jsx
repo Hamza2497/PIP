@@ -14,6 +14,12 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const handle = () => setUser(null)
+    window.addEventListener("pip:unauthorized", handle)
+    return () => window.removeEventListener("pip:unauthorized", handle)
+  }, [])
+
   const login = (userData) => setUser(userData)
 
   const logout = () => {
