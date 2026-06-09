@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ConceptTree } from "./tree/ConceptTree"
 import ConceptDetail from "./tree/ConceptDetail"
+
 import { useProject } from "../context/ProjectContext"
 import { SIDEBAR_OPEN_W, SIDEBAR_CLOSED_W } from "./Sidebar"
 
@@ -96,7 +97,7 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
           <>
             <ConceptTree
               projectId={activeProjectId}
-              onNodeClick={(node) => setSelectedConcept(node.data)}
+              onNodeSelect={(node) => setSelectedConcept(node)}
             />
             <ConceptDetail
               concept={selectedConcept}

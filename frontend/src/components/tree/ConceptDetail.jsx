@@ -1,70 +1,59 @@
-const STATE_COLORS = {
-  mastered:    "#22c55e",
-  in_progress: "#f59e0b",
-  active:      "#38bdf8",
-  ready:       "#52525b",
-  locked:      "#ef4444",
-}
+import { CLR, rgba } from './treeRenderer'
 
 export default function ConceptDetail({ concept, onClose }) {
-  const color = concept ? STATE_COLORS[concept.state] || STATE_COLORS.ready : null
+  if (!concept) return null
+  const col = CLR[concept.state] || CLR.gray
 
   return (
     <div style={{
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: "160px",
-      background: "var(--bg-elevated)",
-      borderTop: "1px solid var(--border)",
-      padding: "12px 16px",
-      transform: concept ? "translateY(0)" : "translateY(100%)",
-      transition: "transform 250ms ease",
-      zIndex: 10,
+      position: 'absolute',
+      bottom: 0, left: 0, right: 0,
+      padding: '30px 18px 14px',
+      background: 'linear-gradient(transparent, rgba(3,3,4,0.97) 26%)',
+      pointerEvents: 'auto',
     }}>
-      {concept && (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-            <div>
-              <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", marginBottom: "4px" }}>
-                {concept.label}
-              </div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <span style={{
-                  fontSize: "10px",
-                  color: color,
-                  background: `${color}22`,
-                  padding: "2px 7px",
-                  borderRadius: "4px",
-                  fontWeight: "600",
-                }}>
-                  {concept.state.replace("_", " ")}
-                </span>
-                {concept.confidence != null && (
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    Confidence: {concept.confidence}/5
-                  </span>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                background: "none", border: "none", color: "var(--text-muted)",
-                cursor: "pointer", fontSize: "16px", padding: "2px 6px",
-                lineHeight: 1,
-              }}
-            >
-              ×
-            </button>
-          </div>
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: "1.5" }}>
-            Phase: {concept.phase}
-            {concept.prereqs?.length > 0 && ` · ${concept.prereqs.length} prerequisite${concept.prereqs.length !== 1 ? "s" : ""}`}
-          </div>
-        </>
-      )}
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
+        <div style={{
+          width:8, height:8, borderRadius:'50%',
+          border:`2px solid ${col}`,
+          background: rgba(col, 0.15),
+          flexShrink:0,
+        }}/>
+        <span style={{
+          fontSize:13, fontWeight:600, color:'#f4f4f5',
+          fontFamily:'"Fira Sans",sans-serif',
+        }}>
+          {concept.name || concept.label}
+        </span>
+        <span style={{
+          fontSize:9, padding:'2px 6px', borderRadius:3,
+          background: rgba(col, 0.15),
+          color: col,
+          fontWeight:600,
+          marginLeft:'auto',
+          fontFamily:'"Fira Code",monospace',
+          letterSpacing:'0.05em',
+        }}>
+          {concept.state}{concept.conf != null ? ` · ${concept.conf}/5` : ''}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background:'none', border:'none',
+            color:'#52525b', fontSize:16,
+            cursor:'pointer', lineHeight:1, padding:'0 3px',
+          }}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+      <div style={{
+        fontSize:11, color:'#52525b', lineHeight:1.65,
+        fontFamily:'"Fira Sans",sans-serif',
+      }}>
+        {concept.description || 'No description available.'}
+      </div>
     </div>
   )
 }
