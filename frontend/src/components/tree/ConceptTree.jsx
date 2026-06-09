@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { layoutTree } from '../../utils/treeLayout'
 import { drawEdges, drawNode } from './treeRenderer'
 import { api } from '../../api'
+import { useTheme } from '../../context/ThemeContext'
 
 const R = 18
 const ZOOM_MAX = 3.0
@@ -44,8 +45,9 @@ function ZoomBtn({ onClick, title, children }) {
 }
 
 export function ConceptTree({ projectId, onNodeSelect }) {
-  const canvasRef = useRef(null)
-  const wrapRef   = useRef(null)
+  const canvasRef  = useRef(null)
+  const wrapRef    = useRef(null)
+  const { dark }   = useTheme()
   const stateRef  = useRef({
     nodes: [], edges: [], stars: [],
     panX: 0, panY: 0, targetPanX: 0, targetPanY: 0,
@@ -57,6 +59,7 @@ export function ConceptTree({ projectId, onNodeSelect }) {
     pinchDist: 0,
     rafId: null,
     W: 680, H: 480,
+    dark: true,
   })
 
   const applyFit = useCallback(() => {
@@ -75,6 +78,9 @@ export function ConceptTree({ projectId, onNodeSelect }) {
     s.targetPanY = cy - (cy - s.targetPanY) * ratio
     s.targetZoom = newZoom
   }, [])
+
+  // Keep stateRef in sync with theme so the draw loop picks it up immediately
+  useEffect(() => { stateRef.current.dark = dark }, [dark])
 
   // ── Load project ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -139,8 +145,12 @@ export function ConceptTree({ projectId, onNodeSelect }) {
       s.panY += (s.targetPanY - s.panY) * EASE
       s.zoom += (s.targetZoom - s.zoom) * EASE
 
+      const dk = s.dark
+      const bg  = dk ? '#030304' : '#f5f5f7'
+      const bgR = dk ? '3,3,4'   : '245,245,247'
+
       ctx.clearRect(0, 0, W, H)
-      ctx.fillStyle = '#030304'
+      ctx.fillStyle = bg
       ctx.fillRect(0, 0, W, H)
 
       // World space
@@ -151,34 +161,36 @@ export function ConceptTree({ projectId, onNodeSelect }) {
       s.stars.forEach(st => {
         ctx.beginPath()
         ctx.arc(st.x, st.y, st.r / s.zoom, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${st.a})`
+        ctx.fillStyle = dk
+          ? `rgba(255,255,255,${st.a})`
+          : `rgba(0,0,0,${st.a * 0.35})`
         ctx.fill()
       })
 
       ;[...new Set(s.nodes.map(n => n.cy))].forEach(ly => {
         ctx.beginPath()
         ctx.moveTo(-1500, ly - R - 20); ctx.lineTo(1500, ly - R - 20)
-        ctx.strokeStyle = 'rgba(255,255,255,0.025)'
+        ctx.strokeStyle = dk ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.06)'
         ctx.lineWidth = 0.5 / s.zoom
         ctx.stroke()
       })
 
-      drawEdges(ctx, s.nodes, s.edges, s.hovId, s.selId, R)
+      drawEdges(ctx, s.nodes, s.edges, s.hovId, s.selId, R, dk)
       const pulse = (Math.sin(performance.now() / 520) + 1) / 2
-      s.nodes.forEach(n => drawNode(ctx, n, n.id === s.hovId, n.id === s.selId, pulse, R))
+      s.nodes.forEach(n => drawNode(ctx, n, n.id === s.hovId, n.id === s.selId, pulse, R, dk))
 
       ctx.restore()
 
       // Screen-space overlays
       const vig = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.75)
-      vig.addColorStop(0, 'rgba(0,0,0,0)')
-      vig.addColorStop(1, 'rgba(0,0,0,0.28)')
+      vig.addColorStop(0, `rgba(${bgR},0)`)
+      vig.addColorStop(1, `rgba(${bgR},${dk ? 0.28 : 0.22})`)
       ctx.fillStyle = vig
       ctx.fillRect(0, 0, W, H)
 
       const tf = ctx.createLinearGradient(0, 0, 0, 36)
-      tf.addColorStop(0, 'rgba(3,3,4,0.9)')
-      tf.addColorStop(1, 'rgba(3,3,4,0)')
+      tf.addColorStop(0, `rgba(${bgR},0.9)`)
+      tf.addColorStop(1, `rgba(${bgR},0)`)
       ctx.fillStyle = tf
       ctx.fillRect(0, 0, W, 36)
 
