@@ -54,7 +54,7 @@ async def get_projects(
         mastered = sum(1 for pc in pcs if pc.phase == ConceptPhase.COMPLETE)
         projects.append({
             "id": str(project.id),
-            "name": stack.name,
+            "name": project.name or stack.name,
             "status": project.status,
             "total_concepts": total,
             "mastered_concepts": mastered,
@@ -135,7 +135,7 @@ async def get_project(
 
     return {
         "id": str(project.id),
-        "name": stack.name,
+        "name": project.name or stack.name,
         "concepts": [
             {
                 "id": str(pc.id),
@@ -146,6 +146,7 @@ async def get_project(
                 "prereqs": pc_prereqs.get(str(pc.id), []),
                 "order_index": pc.order_index,
                 "phase": pc.phase.value,
+                "what_to_build": pc.what_to_build,
             }
             for pc in project_concepts
         ],
@@ -438,27 +439,32 @@ async def roadmap_generate(
 
                 # 8. Annotate plan
                 annotated = await annotate_plan(plan, ordered_concepts_for_annotation)
-                yield f'data: {json.dumps({"type": "plan_annotated", "parts": annotated})}\n\n'
 
-                # 9. Create project_concept records
+                # 9. Create project_concept records first so each part gets an ID
                 order_index = 0
+                pc_id_by_name: dict[str, str] = {}
                 for step in annotated:
                     for part in step.get("parts", []):
                         concept_id = concept_id_map.get(part["concept_name"])
                         if concept_id is None:
                             continue
-                        session.add(
-                            ProjectConcept(
-                                project_id=project.id,
-                                concept_id=concept_id,
-                                order_index=order_index,
-                                what_to_build=part.get("what_to_build"),
-                                phase=ConceptPhase.PENDING,
-                            )
+                        pc = ProjectConcept(
+                            project_id=project.id,
+                            concept_id=concept_id,
+                            order_index=order_index,
+                            what_to_build=part.get("what_to_build"),
+                            phase=ConceptPhase.PENDING,
                         )
+                        session.add(pc)
+                        await session.flush()
+                        pc_id_by_name[part["concept_name"]] = str(pc.id)
                         order_index += 1
-
                 await session.commit()
+
+                for step in annotated:
+                    for part in step.get("parts", []):
+                        part["project_concept_id"] = pc_id_by_name.get(part["concept_name"])
+                yield f'data: {json.dumps({"type": "plan_annotated", "parts": annotated})}\n\n'
 
                 # 10. Mermaid diagram
                 name_to_prereq_names: dict[str, list[str]] = {}
@@ -472,7 +478,7 @@ async def roadmap_generate(
                 mermaid = await generate_mermaid(mermaid_concepts)
                 yield f'data: {json.dumps({"type": "mermaid", "diagram": mermaid})}\n\n'
 
-                yield f'data: {json.dumps({"type": "done"})}\n\n'
+                yield f'data: {json.dumps({"type": "done", "project_id": str(project.id)})}\n\n'
 
         except Exception as e:
             yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'

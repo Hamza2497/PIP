@@ -2,6 +2,60 @@ import { useEffect, useState, useCallback } from "react"
 import { api } from "../../api"
 import { useProject } from "../../context/ProjectContext"
 
+// ── AnnotatedPlan ─────────────────────────────────────────────────────────────
+function AnnotatedPlan({ plan, concepts, onStartPart }) {
+  return (
+    <div style={{ marginTop: "20px" }}>
+      {plan.map(step => (
+        <div key={step.step_number} style={{ marginBottom: "16px" }}>
+          <div style={{
+            fontSize: "11px", fontWeight: "600", color: "#71717a",
+            marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em",
+          }}>
+            Step {step.step_number} — {step.step_title}
+          </div>
+          {(step.parts || []).map(part => {
+            const concept = concepts?.find(c => c.id === part.project_concept_id)
+            return (
+              <div key={part.part_number} style={{
+                display: "flex", alignItems: "flex-start", gap: "12px",
+                padding: "10px 12px",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px", marginBottom: "6px",
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "12px", fontWeight: "500", color: "var(--text-primary)" }}>
+                    {part.concept_name}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "2px" }}>
+                    {part.what_to_build}
+                  </div>
+                </div>
+                {concept && concept.state !== "mastered" && (
+                  <button
+                    onClick={() => onStartPart(part, concept)}
+                    style={{
+                      fontSize: "11px", padding: "4px 10px",
+                      background: "none", border: "1px solid var(--border)",
+                      borderRadius: "4px", color: "var(--text-muted)",
+                      cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "var(--text-dim)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+                  >
+                    Start
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const STATE_COLORS = {
   mastered:    "var(--accent-green)",
   in_progress: "var(--accent-amber)",
@@ -113,7 +167,7 @@ function QueueCard({ concept: c, onCheckpoint, onMaster }) {
 }
 
 export default function RoadmapView() {
-  const { activeProjectId, setActiveConcept } = useProject()
+  const { activeProjectId, setActiveConcept, annotatedPlan } = useProject()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -131,6 +185,10 @@ export default function RoadmapView() {
     const updated = await api.getProject(activeProjectId)
     setProject(updated)
   }, [activeProjectId])
+
+  const handleStartPart = useCallback((part, concept) => {
+    if (concept) setActiveConcept(concept)
+  }, [setActiveConcept])
 
   if (loading) {
     return (
@@ -332,6 +390,24 @@ export default function RoadmapView() {
               />
             ))}
           </div>
+        </>
+      )}
+
+      {/* ── Annotated plan ────────────────────────────────────────────── */}
+      {annotatedPlan && annotatedPlan.length > 0 && (
+        <>
+          <div style={{
+            fontSize:"9px", fontWeight:"600", letterSpacing:"0.12em",
+            color:"var(--text-dim)", fontFamily:'"Fira Code",monospace',
+            marginTop:"28px", marginBottom:"10px",
+          }}>
+            LEARNING PLAN
+          </div>
+          <AnnotatedPlan
+            plan={annotatedPlan}
+            concepts={project?.concepts}
+            onStartPart={handleStartPart}
+          />
         </>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { api } from "../api"
+import { api, parseSse } from "../api"
 import { useProject } from "../context/ProjectContext"
 import RoadmapView from "./main/RoadmapView"
 
@@ -33,7 +33,7 @@ function EmptyState() {
 }
 
 // ── SetupView ─────────────────────────────────────────────────────────────────
-function SetupView({ name, creating }) {
+function SetupView({ name, creating, conceptsFound }) {
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -51,6 +51,11 @@ function SetupView({ name, creating }) {
           <div style={{ fontSize: "14px", color: "var(--text-muted)", fontFamily: '"Fira Sans",sans-serif' }}>
             Building your roadmap…
           </div>
+          {conceptsFound && conceptsFound.length > 0 && (
+            <div style={{ fontSize: "11px", color: "var(--text-dim)" }}>
+              Building concept tree… {conceptsFound.length} concept{conceptsFound.length !== 1 ? "s" : ""} found
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -90,8 +95,97 @@ function SetupView({ name, creating }) {
   )
 }
 
+// ── Handoff card ──────────────────────────────────────────────────────────────
+function HandoffCard({ sentence }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sentence)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div style={{
+      border: "1px solid #3f3f46", borderRadius: "6px", padding: "12px 14px",
+      margin: "8px 0", background: "#18181b",
+    }}>
+      <div style={{
+        fontSize: "10px", color: "#71717a", marginBottom: "6px",
+        textTransform: "uppercase", letterSpacing: "0.05em",
+      }}>
+        Run this in Claude Code when you finish this part
+      </div>
+      <div style={{ fontFamily: "monospace", fontSize: "12px", color: "#e4e4e7", lineHeight: "1.6" }}>
+        {sentence}
+      </div>
+      <button
+        onClick={handleCopy}
+        style={{
+          marginTop: "8px", fontSize: "10px", color: copied ? "#22c55e" : "#52525b",
+          background: "none", border: "none", cursor: "pointer", padding: "0",
+        }}
+      >
+        {copied ? "Copied!" : "Copy"}
+      </button>
+    </div>
+  )
+}
+
+// ── Question card ─────────────────────────────────────────────────────────────
+function QuestionCard({ text }) {
+  return (
+    <div style={{
+      borderLeft: "2px solid #38bdf8", padding: "10px 14px",
+      margin: "10px 0", background: "rgba(56,189,248,0.05)",
+    }}>
+      <div style={{ fontSize: "10px", color: "#38bdf8", marginBottom: "4px" }}>Checkpoint</div>
+      <div style={{ fontSize: "13px", color: "#e4e4e7" }}>{text}</div>
+    </div>
+  )
+}
+
+// ── Score card ────────────────────────────────────────────────────────────────
+function ScoreCard({ confidence, feedback }) {
+  const badgeColor = confidence >= 4 ? "#22c55e" : confidence >= 3 ? "#f59e0b" : "#ef4444"
+  return (
+    <div style={{ border: "1px solid #3f3f46", borderRadius: "6px", padding: "12px 14px", margin: "8px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+        <span style={{
+          fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "3px",
+          background: `${badgeColor}20`, color: badgeColor,
+        }}>
+          {confidence}/5
+        </span>
+        <span style={{ fontSize: "10px", color: "#52525b" }}>Confidence</span>
+      </div>
+      <div style={{ fontSize: "12px", color: "#a1a1aa", lineHeight: "1.6" }}>{feedback}</div>
+    </div>
+  )
+}
+
+// ── Phase banner ──────────────────────────────────────────────────────────────
+function PhaseBanner({ phase }) {
+  if (phase === "IN_PROGRESS") {
+    return (
+      <div style={{
+        textAlign: "center", color: "#52525b", fontSize: "11px", padding: "10px 0",
+        borderTop: "1px solid #27272a", borderBottom: "1px solid #27272a", margin: "10px 0",
+      }}>
+        Go build this part in Claude Code — come back when you're done
+      </div>
+    )
+  }
+  if (phase === "COMPLETE") {
+    return (
+      <div style={{ textAlign: "center", color: "#22c55e", fontSize: "11px", padding: "10px 0" }}>
+        ✓ Concept complete — move to the next part
+      </div>
+    )
+  }
+  return null
+}
+
 // ── CheckpointMessages ────────────────────────────────────────────────────────
-function CheckpointMessages({ messages, concept, sending, scrollRef }) {
+function CheckpointMessages({ messages, concept, sending, scrollRef, questionText, answerInput, setAnswerInput, onSubmitAnswer }) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
       {messages.length === 0 && (
@@ -104,33 +198,82 @@ function CheckpointMessages({ messages, concept, sending, scrollRef }) {
           <strong style={{ color: "var(--text-primary)" }}>{concept?.label}</strong>
         </div>
       )}
-      {messages.map((msg, i) => (
-        <div key={i} style={{
-          display: "flex",
-          justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-          marginBottom: "12px",
-        }}>
-          <div style={{
-            background: msg.role === "user"
-              ? "var(--accent-blue)"
-              : msg.role === "error"
-                ? "rgba(239,68,68,0.12)"
-                : "var(--bg-elevated)",
-            color: msg.role === "error" ? "var(--accent-red)" : "var(--text-primary)",
-            borderRadius: msg.role === "user" ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
-            border: msg.role === "user" ? "none" : "1px solid var(--border)",
-            padding: "9px 13px",
-            maxWidth: "78%",
-            fontSize: "13px",
-            lineHeight: "1.6",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            fontFamily: '"Fira Sans",sans-serif',
+      {messages.map((msg, i) => {
+        if (msg.role === "handoff") {
+          return <HandoffCard key={i} sentence={msg.sentence} />
+        }
+        if (msg.role === "question") {
+          const isLast = i === messages.length - 1 || !messages.slice(i + 1).some(m => m.role === "question")
+          return (
+            <div key={i}>
+              <QuestionCard text={msg.text} />
+              {isLast && questionText && (
+                <div style={{ marginTop: "8px" }}>
+                  <textarea
+                    value={answerInput}
+                    onChange={e => setAnswerInput(e.target.value)}
+                    placeholder="Your answer…"
+                    style={{
+                      width: "100%", background: "#18181b",
+                      border: "1px solid #3f3f46", borderRadius: "6px",
+                      color: "#e4e4e7", padding: "10px", fontSize: "13px",
+                      resize: "vertical", minHeight: "80px",
+                      fontFamily: "inherit", outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    onClick={onSubmitAnswer}
+                    disabled={!answerInput.trim()}
+                    style={{
+                      marginTop: "6px", padding: "6px 14px",
+                      background: answerInput.trim() ? "#38bdf8" : "#27272a",
+                      color: answerInput.trim() ? "#000" : "#52525b",
+                      border: "none", borderRadius: "4px",
+                      fontSize: "12px", cursor: answerInput.trim() ? "pointer" : "default",
+                    }}
+                  >
+                    Submit answer
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        }
+        if (msg.role === "score") {
+          return <ScoreCard key={i} confidence={msg.confidence} feedback={msg.feedback} />
+        }
+        if (msg.role === "phase_change") {
+          return <PhaseBanner key={i} phase={msg.phase} />
+        }
+        return (
+          <div key={i} style={{
+            display: "flex",
+            justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+            marginBottom: "12px",
           }}>
-            {msg.content}
+            <div style={{
+              background: msg.role === "user"
+                ? "var(--accent-blue)"
+                : msg.role === "error"
+                  ? "rgba(239,68,68,0.12)"
+                  : "var(--bg-elevated)",
+              color: msg.role === "error" ? "var(--accent-red)" : "var(--text-primary)",
+              borderRadius: msg.role === "user" ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
+              border: msg.role === "user" ? "none" : "1px solid var(--border)",
+              padding: "9px 13px",
+              maxWidth: "78%",
+              fontSize: "13px",
+              lineHeight: "1.6",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontFamily: '"Fira Sans",sans-serif',
+            }}>
+              {msg.content}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
       {sending && (
         <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "12px" }}>
           <div style={{
@@ -162,38 +305,166 @@ export default function MainArea() {
     projects, setProjects,
     activeConcept, setActiveConcept,
     pendingName, setPendingName,
+    setAnnotatedPlan,
   } = useProject()
 
-  const [messages, setMessages]     = useState([])
-  const [input, setInput]           = useState("")
-  const [sending, setSending]       = useState(false)
-  const [roadmapKey, setRoadmapKey] = useState(0)
-  const scrollRef    = useRef(null)
-  const textareaRef  = useRef(null)
+  const [messages, setMessages]         = useState([])
+  const [input, setInput]               = useState("")
+  const [sending, setSending]           = useState(false)
+  const [roadmapKey, setRoadmapKey]     = useState(0)
+  const [conceptsFound, setConceptsFound] = useState([])
+  // Checkpoint phase state
+  const [currentPhase, setCurrentPhase] = useState("PENDING")
+  const [handoffSentence, setHandoffSentence] = useState("")
+  const [questionText, setQuestionText] = useState(null)
+  const [answerInput, setAnswerInput]   = useState("")
 
-  // Clear messages whenever the checkpoint concept changes
-  useEffect(() => { setMessages([]) }, [activeConcept])
+  const scrollRef   = useRef(null)
+  const textareaRef = useRef(null)
+
+  // Reset checkpoint state when concept changes
+  useEffect(() => {
+    setMessages([])
+    setCurrentPhase(activeConcept?.phase?.toUpperCase() || "PENDING")
+    setHandoffSentence("")
+    setQuestionText(null)
+    setAnswerInput("")
+  }, [activeConcept])
 
   // Auto-scroll on new messages
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+
+  // Auto-start orient when concept is selected with PENDING phase
+  useEffect(() => {
+    if (!activeConcept || currentPhase !== "PENDING") return
+    startOrient()
+  }, [activeConcept?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSetup      = !!pendingName && !activeProjectId
   const isCheckpoint = !!activeProjectId && !!activeConcept
   const isRoadmap    = !!activeProjectId && !activeConcept
   const hasProject   = isSetup || isCheckpoint || isRoadmap
-  const inputActive  = isSetup || isCheckpoint
+
+  // Input is active during setup OR when IN_PROGRESS (paste Claude Code output)
+  const inputActive = isSetup || (isCheckpoint && currentPhase === "IN_PROGRESS")
 
   const placeholder = isSetup
     ? `Describe what you want to learn about "${pendingName}"…`
-    : isCheckpoint
-      ? `Ask about ${activeConcept?.label || "this concept"}…`
-      : "Select a concept above to start a checkpoint →"
+    : isCheckpoint && currentPhase === "IN_PROGRESS"
+      ? "Paste Claude Code output here when you're done…"
+      : isCheckpoint
+        ? `${currentPhase === "CHECKPOINTING" ? "Answer the question above ↑" : currentPhase === "COMPLETE" ? "Concept complete" : "Waiting…"}`
+        : "Select a concept above to start a checkpoint →"
 
   const adjustTextarea = () => {
     const ta = textareaRef.current
     if (!ta) return
     ta.style.height = "auto"
     ta.style.height = Math.min(ta.scrollHeight, 96) + "px"
+  }
+
+  // ── Append streaming text to the last "streaming" message or start a new one
+  const appendStream = (token) => {
+    setMessages(m => {
+      const last = m[m.length - 1]
+      if (last?.role === "streaming") {
+        return [...m.slice(0, -1), { role: "streaming", content: last.content + token }]
+      }
+      return [...m, { role: "streaming", content: token }]
+    })
+  }
+
+  // ── Seal the last streaming message as a regular assistant message
+  const sealStream = () => {
+    setMessages(m => {
+      const last = m[m.length - 1]
+      if (last?.role === "streaming") {
+        return [...m.slice(0, -1), { role: "assistant", content: last.content }]
+      }
+      return m
+    })
+  }
+
+  // ── Orient stream ─────────────────────────────────────────────────────────
+  const startOrient = async () => {
+    if (!activeConcept) return
+    setSending(true)
+    setCurrentPhase("ORIENTING")
+    try {
+      const res = await api.orientStream(activeConcept.id)
+      for await (const ev of parseSse(res)) {
+        if (ev.type === "text") {
+          appendStream(ev.content)
+        } else if (ev.type === "handoff") {
+          sealStream()
+          setHandoffSentence(ev.sentence)
+          setMessages(m => [...m, { role: "handoff", sentence: ev.sentence }])
+        } else if (ev.type === "done") {
+          setCurrentPhase("IN_PROGRESS")
+          setMessages(m => [...m, { role: "phase_change", phase: "IN_PROGRESS" }])
+        }
+      }
+    } catch (err) {
+      sealStream()
+      setMessages(m => [...m, { role: "error", content: `Error: ${err.message}` }])
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // ── Submit Claude Code output ─────────────────────────────────────────────
+  const handleSubmit = async (claudeCodeOutput) => {
+    if (!activeConcept || !claudeCodeOutput.trim()) return
+    setSending(true)
+    setMessages(m => [...m, { role: "user", content: claudeCodeOutput }])
+    setCurrentPhase("CHECKPOINTING")
+    try {
+      const res = await api.submitStream(activeConcept.id, claudeCodeOutput)
+      for await (const ev of parseSse(res)) {
+        if (ev.type === "phase_change") {
+          // already set above; the event confirms it
+        } else if (ev.type === "text") {
+          appendStream(ev.content)
+        } else if (ev.type === "question") {
+          sealStream()
+          setQuestionText(ev.text)
+          setMessages(m => [...m, { role: "question", text: ev.text }])
+        } else if (ev.type === "done") {
+          // nothing extra
+        }
+      }
+    } catch (err) {
+      sealStream()
+      setMessages(m => [...m, { role: "error", content: `Error: ${err.message}` }])
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // ── Answer checkpoint question ────────────────────────────────────────────
+  const handleSubmitAnswer = async () => {
+    if (!activeConcept || !questionText || !answerInput.trim()) return
+    const ans = answerInput.trim()
+    setAnswerInput("")
+    setQuestionText(null)
+    setSending(true)
+    setMessages(m => [...m, { role: "user", content: ans }])
+    try {
+      const res = await api.answerStream(activeConcept.id, questionText, ans)
+      for await (const ev of parseSse(res)) {
+        if (ev.type === "score") {
+          setMessages(m => [...m, { role: "score", confidence: ev.confidence, feedback: ev.feedback }])
+        } else if (ev.type === "phase_change") {
+          setCurrentPhase(ev.phase)
+          setMessages(m => [...m, { role: "phase_change", phase: ev.phase }])
+          if (ev.phase === "COMPLETE") setRoadmapKey(k => k + 1)
+        }
+      }
+    } catch (err) {
+      setMessages(m => [...m, { role: "error", content: `Error: ${err.message}` }])
+    } finally {
+      setSending(false)
+    }
   }
 
   const handleSend = async () => {
@@ -204,17 +475,31 @@ export default function MainArea() {
     setSending(true)
     try {
       if (isSetup) {
-        const plan = `${pendingName}\n${text}`
-        const result = await api.createRoadmap(plan)
-        const updated = await api.getProjects()
-        setProjects(updated)
-        setActiveProjectId(result.project_id)
-        setPendingName(null)
-      } else if (isCheckpoint) {
-        setMessages(m => [...m, { role: "user", content: text }])
-        const res = await api.checkpoint(activeConcept.id, text)
-        setMessages(m => [...m, { role: "assistant", content: res.response }])
-        if (res.phase === "complete") setRoadmapKey(k => k + 1)
+        setConceptsFound([])
+        setAnnotatedPlan(null)
+        const stacksResult = await api.identifyStacks(`${pendingName}\n${text}`)
+        const stacks = stacksResult.stacks || ["General"]
+        const res = await api.generateRoadmap(`${pendingName}\n${text}`, pendingName, stacks)
+        let projectId = null
+        for await (const ev of parseSse(res)) {
+          if (ev.type === "concept_added") {
+            setConceptsFound(prev => [...prev, ev.concept.name])
+          } else if (ev.type === "plan_annotated") {
+            setAnnotatedPlan(ev.parts)
+          } else if (ev.type === "done") {
+            projectId = ev.project_id
+          } else if (ev.type === "error") {
+            throw new Error(ev.message)
+          }
+        }
+        if (projectId) {
+          const updated = await api.getProjects()
+          setProjects(updated)
+          setActiveProjectId(projectId)
+          setPendingName(null)
+        }
+      } else if (isCheckpoint && currentPhase === "IN_PROGRESS") {
+        await handleSubmit(text)
       }
     } catch (err) {
       if (isCheckpoint) {
@@ -271,7 +556,7 @@ export default function MainArea() {
             padding: "2px 7px", borderRadius: "4px",
             fontFamily: '"Fira Code",monospace',
           }}>
-            {activeConcept.phase}
+            {currentPhase.toLowerCase()}
           </span>
         </div>
       )}
@@ -279,7 +564,7 @@ export default function MainArea() {
       {/* Content */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {!hasProject && <EmptyState/>}
-        {isSetup      && <SetupView name={pendingName} creating={sending}/>}
+        {isSetup      && <SetupView name={pendingName} creating={sending} conceptsFound={conceptsFound}/>}
         {isRoadmap    && <RoadmapView key={roadmapKey}/>}
         {isCheckpoint && (
           <CheckpointMessages
@@ -287,6 +572,10 @@ export default function MainArea() {
             concept={activeConcept}
             sending={sending}
             scrollRef={scrollRef}
+            questionText={questionText}
+            answerInput={answerInput}
+            setAnswerInput={setAnswerInput}
+            onSubmitAnswer={handleSubmitAnswer}
           />
         )}
       </div>

@@ -7,6 +7,7 @@ export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([])
   const [activeConcept, setActiveConcept] = useState(null)
   const [pendingName, setPendingName] = useState(null)
+  const [annotatedPlan, setAnnotatedPlan] = useState(null)
 
   return (
     <ProjectContext.Provider
@@ -15,6 +16,7 @@ export function ProjectProvider({ children }) {
         projects, setProjects,
         activeConcept, setActiveConcept,
         pendingName, setPendingName,
+        annotatedPlan, setAnnotatedPlan,
       }}
     >
       {children}
