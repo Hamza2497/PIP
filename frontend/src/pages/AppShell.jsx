@@ -1,5 +1,5 @@
-import { useState } from "react"
-import Sidebar from "../components/Sidebar"
+import { useCallback, useState } from "react"
+import Sidebar, { SIDEBAR_OPEN_W, SIDEBAR_CLOSED_W } from "../components/Sidebar"
 import MainArea from "../components/MainArea"
 import TreePanel from "../components/TreePanel"
 import MobileBar from "../components/MobileBar"
@@ -11,8 +11,32 @@ export default function AppShell() {
   const [treeOpen, setTreeOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false)
+  const [treePct, setTreePct] = useState(0.40)
 
   const isMobile = useMediaQuery("(max-width: 767px)")
+
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startPct = treePct
+    const sidebarW = sidebarOpen ? SIDEBAR_OPEN_W : SIDEBAR_CLOSED_W
+    const totalW = window.innerWidth - sidebarW
+
+    const onMove = (ev) => {
+      const dx = startX - ev.clientX
+      setTreePct(Math.min(0.45, Math.max(0.25, startPct + dx / totalW)))
+    }
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove)
+      document.removeEventListener("mouseup", onUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    document.addEventListener("mousemove", onMove)
+    document.addEventListener("mouseup", onUp)
+    document.body.style.cursor = "ew-resize"
+    document.body.style.userSelect = "none"
+  }, [treePct, sidebarOpen])
 
   if (isMobile) {
     return (
@@ -26,7 +50,7 @@ export default function AppShell() {
           <Sidebar open={true} onToggle={() => setMobileSidebarOpen(false)} />
         </Drawer>
         <Drawer open={mobileTreeOpen} onClose={() => setMobileTreeOpen(false)} side="right">
-          <TreePanel open={true} sidebarOpen={true} onToggle={() => setMobileTreeOpen(false)} />
+          <TreePanel open={true} sidebarOpen={true} treePct={0.40} onToggle={() => setMobileTreeOpen(false)} />
         </Drawer>
       </div>
     )
@@ -44,6 +68,8 @@ export default function AppShell() {
       <TreePanel
         open={treeOpen}
         sidebarOpen={sidebarOpen}
+        treePct={treePct}
+        onResizeStart={handleResizeStart}
         onToggle={() => setTreeOpen(p => !p)}
       />
     </div>

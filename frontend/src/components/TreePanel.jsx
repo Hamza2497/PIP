@@ -16,14 +16,13 @@ function IconPanelRight({ active }) {
   )
 }
 
-export default function TreePanel({ open, sidebarOpen, onToggle }) {
+export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle }) {
   const { activeProjectId } = useProject()
   const [selectedConcept, setSelectedConcept] = useState(null)
 
-  // 45% of the remaining space after sidebar, always tracks sidebar state
   const sidebarW = sidebarOpen ? SIDEBAR_OPEN_W : SIDEBAR_CLOSED_W
   const panelW = open
-    ? `calc((100vw - ${sidebarW}px) * 0.40)`
+    ? `calc((100vw - ${sidebarW}px) * ${treePct})`
     : `${STRIP_W}px`
 
   return (
@@ -33,12 +32,30 @@ export default function TreePanel({ open, sidebarOpen, onToggle }) {
       height: "100vh",
       display: "flex",
       flexDirection: "row",
-      transition: "width 200ms ease, min-width 200ms ease",
+      transition: open ? "none" : "width 200ms ease, min-width 200ms ease",
       borderLeft: "1px solid var(--border)",
       background: "var(--bg-panel)",
       flexShrink: 0,
       overflow: "hidden",
+      position: "relative",
     }}>
+      {/* ── Resize handle — drag to resize between 25–45% ───────────────── */}
+      {open && onResizeStart && (
+        <div
+          onMouseDown={onResizeStart}
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "5px",
+            height: "100%",
+            cursor: "ew-resize",
+            zIndex: 20,
+          }}
+          title="Drag to resize"
+        />
+      )}
+
       {/* ── Always-visible toggle strip ─────────────────────────────────── */}
       <div style={{
         width: `${STRIP_W}px`,
