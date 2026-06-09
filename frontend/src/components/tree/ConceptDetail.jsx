@@ -1,15 +1,19 @@
 import { CLR, rgba } from './treeRenderer'
+import { useTheme } from '../../context/ThemeContext'
 
 export default function ConceptDetail({ concept, onClose }) {
+  const { dark } = useTheme()
   if (!concept) return null
-  const col = CLR[concept.state] || CLR.gray
+
+  const col   = CLR[concept.state] || CLR.gray
+  const bgRgb = dark ? '3,3,4' : '245,245,247'
 
   return (
     <div style={{
       position: 'absolute',
       bottom: 0, left: 0, right: 0,
       padding: '30px 18px 14px',
-      background: 'linear-gradient(transparent, rgba(3,3,4,0.97) 26%)',
+      background: `linear-gradient(transparent, rgba(${bgRgb},0.97) 26%)`,
       pointerEvents: 'auto',
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
@@ -20,7 +24,8 @@ export default function ConceptDetail({ concept, onClose }) {
           flexShrink:0,
         }}/>
         <span style={{
-          fontSize:13, fontWeight:600, color:'#f4f4f5',
+          fontSize:13, fontWeight:600,
+          color: 'var(--text-primary)',
           fontFamily:'"Fira Sans",sans-serif',
         }}>
           {concept.name || concept.label}
@@ -40,7 +45,7 @@ export default function ConceptDetail({ concept, onClose }) {
           onClick={onClose}
           style={{
             background:'none', border:'none',
-            color:'#52525b', fontSize:16,
+            color: 'var(--text-muted)', fontSize:16,
             cursor:'pointer', lineHeight:1, padding:'0 3px',
           }}
           aria-label="Close"
@@ -49,7 +54,9 @@ export default function ConceptDetail({ concept, onClose }) {
         </button>
       </div>
       <div style={{
-        fontSize:11, color:'#52525b', lineHeight:1.65,
+        fontSize:11,
+        color: 'var(--text-muted)',
+        lineHeight:1.65,
         fontFamily:'"Fira Sans",sans-serif',
       }}>
         {concept.description || 'No description available.'}
