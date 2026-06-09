@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Concept
 from app.utils.embeddings import get_embedding
 
-SIMILARITY_THRESHOLD = 0.92
+SIMILARITY_THRESHOLD = 0.75
 DISTANCE_THRESHOLD = 1 - SIMILARITY_THRESHOLD
 
 

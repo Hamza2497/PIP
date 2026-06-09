@@ -93,8 +93,17 @@ async def identify_stacks(plan: str) -> list[str]:
         raise ValueError("Could not identify stacks from plan")
 
 
-async def generate_concept_tree(stack: str, plan: str) -> list[dict]:
+async def generate_concept_tree(
+    stack: str, plan: str, existing_concept_names: list[str] | None = None
+) -> list[dict]:
     user_message = f"Stack: {stack}\n\nProject plan:\n{plan}"
+    if existing_concept_names:
+        user_message += (
+            f"\n\nConcepts already generated for this project: {', '.join(existing_concept_names)}. "
+            "Do NOT generate a concept that overlaps with any of the above. "
+            "If a concept from the list above applies to this step, reference it by "
+            "exact name — do not create a new variant of it."
+        )
     response = await _client.aio.models.generate_content(
         model=_MODEL,
         contents=user_message,

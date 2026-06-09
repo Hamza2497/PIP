@@ -383,10 +383,12 @@ async def roadmap_generate(
 
                 # 3. Generate concept trees
                 all_raw_concepts: list[tuple[str, dict]] = []
+                accumulated_names: list[str] = []
                 for stack_name in confirmed_stacks:
                     yield f'data: {json.dumps({"type": "text", "content": f"Generating concept tree for {stack_name}..."})}\n\n'
-                    raw = await generate_concept_tree(stack_name, plan)
+                    raw = await generate_concept_tree(stack_name, plan, existing_concept_names=accumulated_names)
                     all_raw_concepts.extend([(stack_name, c) for c in raw])
+                    accumulated_names.extend([c["name"] for c in raw])
 
                 # 4. Embed + deduplicate
                 concept_id_map: dict[str, object] = {}  # name -> concept_id
