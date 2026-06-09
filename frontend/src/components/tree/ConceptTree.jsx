@@ -167,14 +167,6 @@ export function ConceptTree({ projectId, onNodeSelect }) {
         ctx.fill()
       })
 
-      ;[...new Set(s.nodes.map(n => n.cy))].forEach(ly => {
-        ctx.beginPath()
-        ctx.moveTo(-1500, ly - R - 20); ctx.lineTo(1500, ly - R - 20)
-        ctx.strokeStyle = dk ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.06)'
-        ctx.lineWidth = 0.5 / s.zoom
-        ctx.stroke()
-      })
-
       drawEdges(ctx, s.nodes, s.edges, s.hovId, s.selId, R, dk)
       const pulse = (Math.sin(performance.now() / 520) + 1) / 2
       s.nodes.forEach(n => drawNode(ctx, n, n.id === s.hovId, n.id === s.selId, pulse, R, dk))

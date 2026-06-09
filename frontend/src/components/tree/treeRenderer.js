@@ -13,12 +13,6 @@ export const CLR = {
   locked:      '#ef4444',
 }
 
-// Light-mode overrides for states that need more contrast on a pale bg
-const CLR_LIGHT = {
-  ...CLR,
-  ready:  '#8e8e99',
-  locked: '#c0c0cc',
-}
 
 export function rgba(hex, a) {
   const n = parseInt(hex.slice(1), 16)
@@ -61,8 +55,7 @@ export function drawEdges(ctx, nodes, edges, hovId, selId, R, dark = true) {
 }
 
 export function drawNode(ctx, n, isHov, isSel, pulse, R, dark = true) {
-  const palette = dark ? CLR : CLR_LIGHT
-  const col = palette[n.state] || palette.gray
+  const col = CLR[n.state] || CLR.gray
 
   // active pulse ring
   if (n.state === 'active') {
