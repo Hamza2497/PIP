@@ -27,17 +27,16 @@ function ZoomBtn({ onClick, title, children }) {
   const ref = useRef(null)
   return (
     <button ref={ref} onClick={onClick} title={title}
-      onMouseEnter={() => { ref.current.style.color = '#f4f4f5' }}
-      onMouseLeave={() => { ref.current.style.color = '#52525b' }}
+      onMouseEnter={() => { ref.current.style.color = 'var(--text-primary)' }}
+      onMouseLeave={() => { ref.current.style.color = 'var(--text-muted)' }}
       style={{
         width: '28px', height: '28px',
-        background: 'rgba(13,13,15,0.88)',
-        border: '1px solid rgba(31,31,35,0.9)',
-        color: '#52525b', cursor: 'pointer',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-muted)', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 0,
-        transition: 'color 120ms ease',
-        backdropFilter: 'blur(6px)',
+        transition: 'color 120ms ease, background 200ms ease, border-color 200ms ease',
       }}>
       {children}
     </button>
@@ -310,7 +309,7 @@ export function ConceptTree({ projectId, onNodeSelect }) {
         position: 'absolute', bottom: 12, right: 10,
         display: 'flex', flexDirection: 'column', zIndex: 10,
         borderRadius: '7px', overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.6)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
       }}>
         <ZoomBtn onClick={() => applyZoom(1.25)} title="Zoom in">
           <svg width="12" height="12" viewBox="0 0 12 12" {...is}>
