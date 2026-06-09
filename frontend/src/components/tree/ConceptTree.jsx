@@ -43,7 +43,7 @@ function ZoomBtn({ onClick, title, children }) {
   )
 }
 
-export function ConceptTree({ projectId, onNodeSelect }) {
+export function ConceptTree({ projectId, onNodeSelect, refreshKey }) {
   const canvasRef  = useRef(null)
   const wrapRef    = useRef(null)
   const { dark }   = useTheme()
@@ -107,7 +107,7 @@ export function ConceptTree({ projectId, onNodeSelect }) {
       s.panX = cam.panX; s.panY = cam.panY; s.zoom = cam.zoom
       s.targetPanX = cam.panX; s.targetPanY = cam.panY; s.targetZoom = cam.zoom
     }).catch(console.error)
-  }, [projectId])
+  }, [projectId, refreshKey])
 
   // ── Canvas + render loop ───────────────────────────────────────────────────
   useEffect(() => {

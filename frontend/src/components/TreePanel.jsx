@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { ConceptTree } from "./tree/ConceptTree"
 import ConceptDetail from "./tree/ConceptDetail"
-
+import { api } from "../api"
 import { useProject } from "../context/ProjectContext"
 import { SIDEBAR_OPEN_W, SIDEBAR_CLOSED_W } from "./Sidebar"
 
@@ -20,6 +20,14 @@ function IconPanelRight({ active }) {
 export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle }) {
   const { activeProjectId } = useProject()
   const [selectedConcept, setSelectedConcept] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  async function handleMaster() {
+    if (!activeProjectId || !selectedConcept) return
+    await api.masterConcept(activeProjectId, selectedConcept.id)
+    setSelectedConcept(null)
+    setRefreshKey(k => k + 1)
+  }
 
   const sidebarW = sidebarOpen ? SIDEBAR_OPEN_W : SIDEBAR_CLOSED_W
   const panelW = open
@@ -98,10 +106,12 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
             <ConceptTree
               projectId={activeProjectId}
               onNodeSelect={(node) => setSelectedConcept(node)}
+              refreshKey={refreshKey}
             />
             <ConceptDetail
               concept={selectedConcept}
               onClose={() => setSelectedConcept(null)}
+              onMaster={handleMaster}
             />
           </>
         ) : (

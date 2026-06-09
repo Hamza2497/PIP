@@ -281,3 +281,32 @@ async def create_roadmap(
             for cid in sorted_ids
         ],
     }
+
+
+@router.post("/project/{project_id}/concept/{project_concept_id}/master")
+async def master_concept(
+    project_id: str,
+    project_concept_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    result = await session.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == user.id)
+    )
+    project = result.scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404)
+
+    result = await session.execute(
+        select(ProjectConcept).where(
+            ProjectConcept.id == project_concept_id,
+            ProjectConcept.project_id == project.id,
+        )
+    )
+    pc = result.scalar_one_or_none()
+    if pc is None:
+        raise HTTPException(status_code=404)
+
+    pc.phase = ConceptPhase.COMPLETE
+    await session.commit()
+    return {"ok": True}

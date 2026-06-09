@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { api } from "../../api"
 import { useProject } from "../../context/ProjectContext"
 
@@ -24,6 +24,91 @@ function MiniRing({ state }) {
     <svg width="10" height="10" style={{ flexShrink:0 }}>
       <circle cx="5" cy="5" r="3.5" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1.4"/>
     </svg>
+  )
+}
+
+function QueueCard({ concept: c, onCheckpoint, onMaster }) {
+  const [mastering, setMastering] = useState(false)
+  const clickable = c.state !== "locked"
+  const canMaster = c.state === "ready"
+
+  async function handleMasterClick(e) {
+    e.stopPropagation()
+    if (mastering) return
+    setMastering(true)
+    try { await onMaster(c) } finally { setMastering(false) }
+  }
+
+  return (
+    <div
+      onClick={() => { if (clickable && !canMaster) { onCheckpoint() } }}
+      style={{
+        background:"var(--bg-panel)",
+        border:"1px solid var(--border)",
+        borderRadius:"8px",
+        padding:"10px 12px",
+        width:"148px", minWidth:"148px",
+        cursor: clickable && !canMaster ? "pointer" : "default",
+        opacity: c.state === "locked" ? 0.4 : 1,
+        transition:"background 150ms ease, border-color 150ms ease",
+        display:"flex", flexDirection:"column",
+      }}
+      onMouseEnter={e => clickable && !canMaster && (
+        e.currentTarget.style.background = "rgba(255,255,255,0.025)",
+        e.currentTarget.style.borderColor = "var(--text-dim)"
+      )}
+      onMouseLeave={e => (
+        e.currentTarget.style.background = "var(--bg-panel)",
+        e.currentTarget.style.borderColor = "var(--border)"
+      )}
+    >
+      <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"6px" }}>
+        <MiniRing state={c.state}/>
+        <span style={{
+          fontSize:"9px", color:STATE_COLORS[c.state], fontWeight:"700",
+          fontFamily:'"Fira Code",monospace', letterSpacing:"0.06em",
+        }}>
+          {STATE_LABELS[c.state]?.toUpperCase() ?? c.state.toUpperCase()}
+        </span>
+      </div>
+      <div style={{
+        fontSize:"11px", color:"var(--text-primary)",
+        lineHeight:"1.35", wordBreak:"break-word",
+        fontFamily:'"Fira Sans", sans-serif',
+        flex:1, marginBottom: canMaster ? 8 : 0,
+      }}>
+        {c.label}
+      </div>
+      {canMaster && (
+        <button
+          onClick={handleMasterClick}
+          disabled={mastering}
+          style={{
+            display:"flex", alignItems:"center", gap:4,
+            background:"rgba(34,197,94,0.1)",
+            border:"1px solid rgba(34,197,94,0.3)",
+            borderRadius:5,
+            color:"var(--accent-green)",
+            fontSize:"9px", fontWeight:"700",
+            padding:"4px 8px",
+            cursor: mastering ? "wait" : "pointer",
+            fontFamily:'"Fira Code",monospace',
+            letterSpacing:"0.04em",
+            opacity: mastering ? 0.6 : 1,
+            transition:"background 150ms ease",
+            width:"100%", justifyContent:"center",
+          }}
+          onMouseEnter={e => !mastering && (e.currentTarget.style.background = "rgba(34,197,94,0.18)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "rgba(34,197,94,0.1)")}
+        >
+          <svg width="9" height="9" viewBox="0 0 12 12" fill="none"
+            stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1.5,6 4.5,9 10.5,3"/>
+          </svg>
+          {mastering ? "MARKING…" : "MASTERED"}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -75,6 +160,12 @@ export default function RoadmapView() {
     setActiveConcept(activeConcept)
     setActiveView("checkpoint")
   }
+
+  const handleMaster = useCallback(async (concept) => {
+    await api.masterConcept(activeProjectId, concept.id)
+    const updated = await api.getProject(activeProjectId)
+    setProject(updated)
+  }, [activeProjectId])
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"28px 24px" }}>
@@ -231,50 +322,14 @@ export default function RoadmapView() {
             CONCEPT QUEUE
           </div>
           <div style={{ display:"flex", gap:"8px", overflowX:"auto", paddingBottom:"8px" }}>
-            {queue.map(c => {
-              const clickable = c.state !== "locked"
-              return (
-                <div
-                  key={c.id}
-                  onClick={() => { if (clickable) { setActiveConcept(c); setActiveView("checkpoint") } }}
-                  style={{
-                    background:"var(--bg-panel)",
-                    border:"1px solid var(--border)",
-                    borderRadius:"8px",
-                    padding:"10px 12px",
-                    width:"148px", minWidth:"148px",
-                    cursor: clickable ? "pointer" : "default",
-                    opacity: c.state === "locked" ? 0.4 : 1,
-                    transition:"background 150ms ease, border-color 150ms ease",
-                  }}
-                  onMouseEnter={e => clickable && (
-                    e.currentTarget.style.background = "rgba(255,255,255,0.025)",
-                    e.currentTarget.style.borderColor = "var(--text-dim)"
-                  )}
-                  onMouseLeave={e => (
-                    e.currentTarget.style.background = "var(--bg-panel)",
-                    e.currentTarget.style.borderColor = "var(--border)"
-                  )}
-                >
-                  <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"6px" }}>
-                    <MiniRing state={c.state}/>
-                    <span style={{
-                      fontSize:"9px", color:STATE_COLORS[c.state], fontWeight:"700",
-                      fontFamily:'"Fira Code",monospace', letterSpacing:"0.06em",
-                    }}>
-                      {STATE_LABELS[c.state]?.toUpperCase() ?? c.state.toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{
-                    fontSize:"11px", color:"var(--text-primary)",
-                    lineHeight:"1.35", wordBreak:"break-word",
-                    fontFamily:'"Fira Sans", sans-serif',
-                  }}>
-                    {c.label}
-                  </div>
-                </div>
-              )
-            })}
+            {queue.map(c => (
+              <QueueCard
+                key={c.id}
+                concept={c}
+                onCheckpoint={() => { setActiveConcept(c); setActiveView("checkpoint") }}
+                onMaster={handleMaster}
+              />
+            ))}
           </div>
         </>
       )}

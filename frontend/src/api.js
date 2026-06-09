@@ -19,4 +19,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ project_concept_id: projectConceptId, message }),
     }),
+  masterConcept: (projectId, projectConceptId) =>
+    apiFetch(`/project/${projectId}/concept/${projectConceptId}/master`, { method: "POST" }),
 }
