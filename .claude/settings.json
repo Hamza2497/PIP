@@ -24,7 +24,11 @@
       "Bash(npm run *)",
       "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"AI learning education SaaS dark minimal premium\" --design-system -p \"PIP\")",
       "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark minimalism premium SaaS tech\" --domain style)",
-      "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"hero landing page SaaS modern\" --domain landing)"
+      "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"hero landing page SaaS modern\" --domain landing)",
+      "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"edtech learning SaaS dark dashboard concept tree AI tutor\" --design-system -p \"PIP - Personalised Interactive Pedagogy\")",
+      "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"dark SaaS dashboard sidebar panel layout\" --domain ux -n 6)",
+      "Bash(python3 /Users/hamzahassaf/.claude/skills/ui-ux-pro-max/scripts/search.py \"OLED dark minimal\" --domain style -n 4)",
+      "Bash(npx vite *)"
     ],
     "additionalDirectories": [
       "/tmp",
