@@ -101,30 +101,24 @@ function HoverItem({ isActive, onClick, title, children, disabled }) {
 
 export default function Sidebar({ open, onToggle }) {
   const { user, logout } = useAuth()
-  const { activeProjectId, setActiveProjectId, projects, setProjects, setActiveView } = useProject()
+  const { activeProjectId, setActiveProjectId, setActiveConcept, projects, setProjects, pendingName, setPendingName } = useProject()
   const { dark, toggle: toggleTheme } = useTheme()
   const [creating, setCreating] = useState(false)
   const [newPlan, setNewPlan] = useState("")
-  const [loading, setLoading] = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => { api.getProjects().then(setProjects).catch(console.error) }, [setProjects])
   useEffect(() => { if (creating) inputRef.current?.focus() }, [creating])
 
-  const handleCreate = async (e) => {
+  const handleCreate = (e) => {
     e.preventDefault()
-    if (!newPlan.trim()) return
-    setLoading(true)
-    try {
-      const result = await api.createRoadmap(newPlan.trim())
-      const updated = await api.getProjects()
-      setProjects(updated)
-      setActiveProjectId(result.project_id)
-      setActiveView("roadmap")
-      setCreating(false)
-      setNewPlan("")
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+    const name = newPlan.trim()
+    if (!name) return
+    setPendingName(name)
+    setActiveProjectId(null)
+    setActiveConcept(null)
+    setCreating(false)
+    setNewPlan("")
   }
 
   const initials = user?.name ? user.name.charAt(0).toUpperCase() : "?"
@@ -233,7 +227,7 @@ export default function Sidebar({ open, onToggle }) {
           <form onSubmit={handleCreate}>
             <input ref={inputRef} value={newPlan}
               onChange={e => setNewPlan(e.target.value)}
-              placeholder="Subject to learn…" disabled={loading}
+              placeholder="Project name…"
               style={{
                 width:"100%", background:"var(--bg-elevated)",
                 border:"1px solid var(--border)", borderRadius:"7px",
@@ -244,14 +238,14 @@ export default function Sidebar({ open, onToggle }) {
               }}
             />
             <div style={{ display:"flex", gap:"4px" }}>
-              <button type="submit" disabled={loading} style={{
+              <button type="submit" style={{
                 flex:1, background:"var(--accent-blue)", color:"#000",
                 border:"none", borderRadius:"6px", fontSize:"11px",
                 fontWeight:"700", padding:"5px 0", cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontFamily:"inherit",
               }}>
-                {loading ? <Spinner/> : "Create"}
+                Start
               </button>
               <button type="button" onClick={() => setCreating(false)} style={{
                 ...iconBtn(), border:"1px solid var(--border)",
@@ -315,12 +309,12 @@ export default function Sidebar({ open, onToggle }) {
         {projects.map(p => {
           const pct = p.total_concepts > 0
             ? Math.round((p.mastered_concepts / p.total_concepts) * 100) : 0
-          const isActive = p.id === activeProjectId
+          const isActive = p.id === activeProjectId && !pendingName
           return (
             <HoverItem
               key={p.id}
               isActive={isActive}
-              onClick={() => { setActiveProjectId(p.id); setActiveView("roadmap") }}
+              onClick={() => { setActiveProjectId(p.id); setPendingName(null); setActiveConcept(null) }}
               title={p.name}
             >
               <div style={{ display:"flex", alignItems:"center", gap:"7px", width:"100%" }}>

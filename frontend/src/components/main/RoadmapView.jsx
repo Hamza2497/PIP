@@ -113,7 +113,7 @@ function QueueCard({ concept: c, onCheckpoint, onMaster }) {
 }
 
 export default function RoadmapView() {
-  const { activeProjectId, setActiveView, setActiveConcept } = useProject()
+  const { activeProjectId, setActiveConcept } = useProject()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -149,7 +149,7 @@ export default function RoadmapView() {
 
   if (!project) return null
 
-  const activeConcept = project.concepts.find(
+  const currentConcept = project.concepts.find(
     c => c.state === "active" || c.state === "in_progress"
   )
   const queue = project.concepts
@@ -164,9 +164,8 @@ export default function RoadmapView() {
   const pct = total > 0 ? Math.round((mastered / total) * 100) : 0
 
   const handleStart = () => {
-    if (!activeConcept) return
-    setActiveConcept(activeConcept)
-    setActiveView("checkpoint")
+    if (!currentConcept) return
+    setActiveConcept(currentConcept)
   }
 
   return (
@@ -217,7 +216,7 @@ export default function RoadmapView() {
       </div>
 
       {/* ── Active concept card ────────────────────────────────────────── */}
-      {activeConcept && (
+      {currentConcept && (
         <div style={{
           background:"var(--bg-panel)",
           border:"1px solid var(--border)",
@@ -247,7 +246,7 @@ export default function RoadmapView() {
               fontFamily:'"Fira Code",monospace',
               letterSpacing:"0.07em",
             }}>
-              {activeConcept.state === "in_progress" ? "IN PROGRESS" : "UP NEXT"}
+              {currentConcept.state === "in_progress" ? "IN PROGRESS" : "UP NEXT"}
             </span>
           </div>
 
@@ -257,17 +256,17 @@ export default function RoadmapView() {
             marginBottom:"8px",
             fontFamily:'"Fira Sans", sans-serif',
           }}>
-            {activeConcept.label}
+            {currentConcept.label}
           </div>
 
           <div style={{
             fontSize:"11px", color:"var(--text-muted)", marginBottom:"18px",
             fontFamily:'"Fira Code",monospace',
           }}>
-            {activeConcept.phase}
-            {activeConcept.confidence != null && (
+            {currentConcept.phase}
+            {currentConcept.confidence != null && (
               <span style={{ marginLeft:"10px", color:"var(--text-dim)" }}>
-                confidence: {activeConcept.confidence}
+                confidence: {currentConcept.confidence}
               </span>
             )}
           </div>
@@ -293,7 +292,7 @@ export default function RoadmapView() {
         </div>
       )}
 
-      {!activeConcept && (
+      {!currentConcept && (
         <div style={{
           background:"var(--bg-panel)",
           border:"1px solid var(--border)",
@@ -328,7 +327,7 @@ export default function RoadmapView() {
               <QueueCard
                 key={c.id}
                 concept={c}
-                onCheckpoint={() => { setActiveConcept(c); setActiveView("checkpoint") }}
+                onCheckpoint={() => setActiveConcept(c)}
                 onMaster={handleMaster}
               />
             ))}
