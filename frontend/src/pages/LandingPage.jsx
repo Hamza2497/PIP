@@ -179,6 +179,7 @@ export default function LandingPage() {
   const navigate   = useNavigate()
   const { dark, toggle: toggleTheme } = useTheme()
   const [scrolled, setScrolled] = useState(false)
+  const [signingIn, setSigningIn] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -187,11 +188,15 @@ export default function LandingPage() {
   }, [])
 
   const handleSuccess = useCallback(async ({ credential }) => {
+    setSigningIn(true)
     try {
       const user = await api.googleAuth(credential)
       login(user)
       navigate("/app")
-    } catch (e) { console.error("Login failed:", e) }
+    } catch (e) {
+      console.error("Login failed:", e)
+      setSigningIn(false)
+    }
   }, [login, navigate])
 
   const s = {
@@ -326,16 +331,35 @@ export default function LandingPage() {
         </p>
 
         {/* CTA */}
-        <div style={{ marginBottom:"72px" }}>
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={() => console.error("Google login error")}
-            theme="filled_black"
-            size="large"
-            text="continue_with"
-            shape="pill"
-            locale="en"
-          />
+        <div style={{ marginBottom:"72px", minHeight:"44px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          {signingIn ? (
+            <div style={{
+              display:"flex", alignItems:"center", gap:"10px",
+              padding:"11px 24px",
+              borderRadius:"99px",
+              border:"1px solid var(--border)",
+              fontFamily:'"Fira Code", monospace',
+              fontSize:"13px",
+              color:"var(--text-muted)",
+              letterSpacing:"0.04em",
+            }}>
+              <span className="pulse-dot" style={{
+                width:"8px", height:"8px", borderRadius:"50%",
+                background:"var(--accent-blue)", display:"inline-block",
+              }}/>
+              Signing in…
+            </div>
+          ) : (
+            <GoogleLogin
+              onSuccess={handleSuccess}
+              onError={() => console.error("Google login error")}
+              theme="filled_black"
+              size="large"
+              text="continue_with"
+              shape="pill"
+              locale="en"
+            />
+          )}
         </div>
 
         {/* Tree preview card */}

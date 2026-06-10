@@ -41,7 +41,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8000/projects)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8000/docs)",
       "Bash(.venv/bin/python -c \"import alembic; print\\(alembic.__version__\\)\")",
-      "Bash(.venv/bin/python3 -m alembic init -t async alembic)"
+      "Bash(.venv/bin/python3 -m alembic init -t async alembic)",
+      "Bash(npx playwright *)"
     ],
     "additionalDirectories": [
       "/tmp",
