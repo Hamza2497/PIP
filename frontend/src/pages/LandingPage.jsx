@@ -331,7 +331,7 @@ export default function LandingPage() {
         </p>
 
         {/* CTA */}
-        <div style={{ marginBottom:"72px", minHeight:"44px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ margin:"0 auto 72px", minHeight:"44px", display:"flex", alignItems:"center", justifyContent:"center", maxWidth:"320px" }}>
           {signingIn ? (
             <div style={{
               display:"flex", alignItems:"center", gap:"10px",
@@ -358,6 +358,7 @@ export default function LandingPage() {
               text="continue_with"
               shape="pill"
               locale="en"
+              width="280"
             />
           )}
         </div>
