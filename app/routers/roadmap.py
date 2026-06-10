@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from google.genai import types
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ from app.agents.roadmap_agent import (
 )
 from app.database import AsyncSessionLocal, get_db
 from app.enums import ConceptPhase
-from app.models import Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User, UserConcept
+from app.models import BuildJournal, Concept, ConceptPrerequisite, Project, ProjectConcept, Stack, User, UserConcept
 from app.prompts import ROADMAP_SYSTEM_PROMPT
 from app.routers.chat import _client
 from app.services.concepts import get_or_create_concept
@@ -152,6 +152,26 @@ async def get_project(
             for pc in project_concepts
         ],
     }
+
+
+@router.delete("/project/{project_id}")
+async def delete_project(
+    project_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    result = await session.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == user.id)
+    )
+    project = result.scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404)
+
+    await session.execute(delete(BuildJournal).where(BuildJournal.project_id == project.id))
+    await session.execute(delete(ProjectConcept).where(ProjectConcept.project_id == project.id))
+    await session.execute(delete(Project).where(Project.id == project.id))
+    await session.commit()
+    return {"status": "deleted"}
 
 
 def _parse_json(text: str) -> dict:

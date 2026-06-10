@@ -44,6 +44,7 @@ export const api = {
   createRoadmap: (plan) =>
     apiFetch("/roadmap", { method: "POST", body: JSON.stringify({ plan }) }),
   getProject: (id) => apiFetch(`/project/${id}`),
+  deleteProject: (id) => apiFetch(`/project/${id}`, { method: "DELETE" }),
   checkpoint: (projectConceptId, message) =>
     apiFetch("/checkpoint", {
       method: "POST",

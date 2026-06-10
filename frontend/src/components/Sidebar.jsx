@@ -91,13 +91,24 @@ function Spinner() {
   )
 }
 
+function IconTrash() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+      stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h8M4.5 3V2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M5 5.5v3M7 5.5v3M2.5 3l.5 6.5a1 1 0 0 0 1 .9h4a1 1 0 0 0 1-.9L9.5 3"/>
+    </svg>
+  )
+}
+
 function HoverItem({ isActive, onClick, title, children, disabled }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <button
+    <div
       onClick={onClick}
       title={title}
-      disabled={disabled}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (!disabled && (e.key === "Enter" || e.key === " ")) onClick?.() }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -106,19 +117,22 @@ function HoverItem({ isActive, onClick, title, children, disabled }) {
           : hovered ? "rgba(255,255,255,0.03)" : "none",
         border: "none",
         borderRadius: "7px",
-        cursor: "pointer",
+        cursor: disabled ? "default" : "pointer",
         padding: "6px 7px",
         display: "flex", alignItems: "center",
         width: "100%", textAlign: "left",
         marginBottom: "1px",
+        boxSizing: "border-box",
         borderLeft: isActive ? "2px solid var(--accent-blue)" : "2px solid transparent",
         boxShadow: isActive ? "inset 4px 0 12px rgba(56,189,248,0.08)" : "none",
         transition: "background 150ms ease, box-shadow 150ms ease, border-color 150ms ease",
         color: isActive ? "var(--text-primary)" : hovered ? "var(--text-primary)" : "var(--text-muted)",
+        opacity: disabled ? 0.5 : 1,
+        pointerEvents: disabled ? "none" : "auto",
       }}
     >
-      {children}
-    </button>
+      {typeof children === "function" ? children(hovered) : children}
+    </div>
   )
 }
 
@@ -128,6 +142,8 @@ export default function Sidebar({ open, onToggle }) {
   const { dark, toggle: toggleTheme } = useTheme()
   const [creating, setCreating] = useState(false)
   const [newPlan, setNewPlan] = useState("")
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => { api.getProjects().then(setProjects).catch(console.error) }, [setProjects])
@@ -142,6 +158,25 @@ export default function Sidebar({ open, onToggle }) {
     setActiveConcept(null)
     setCreating(false)
     setNewPlan("")
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await api.deleteProject(deleteTarget.id)
+      setProjects(prev => prev.filter(p => p.id !== deleteTarget.id))
+      if (activeProjectId === deleteTarget.id) {
+        setActiveProjectId(null)
+        setActiveConcept(null)
+        setPendingName(null)
+      }
+      setDeleteTarget(null)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const initials = user?.name ? user.name.charAt(0).toUpperCase() : "?"
@@ -293,25 +328,44 @@ export default function Sidebar({ open, onToggle }) {
               onClick={() => { setActiveProjectId(p.id); setPendingName(null); setActiveConcept(null) }}
               title={p.name}
             >
-              <div style={{ display:"flex", alignItems:"center", gap:"7px", width:"100%" }}>
-                <ProgressRing pct={pct} color={isActive ? "var(--accent-blue)" : "var(--accent-gray)"}/>
-                {open && (
-                  <span style={{
-                    fontSize:"11px",
-                    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                    flex:1,
-                  }}>
-                    {p.name}
-                  </span>
-                )}
-                {open && isActive && (
-                  <div style={{
-                    width:"5px", height:"5px", borderRadius:"50%",
-                    background:"var(--accent-blue)", flexShrink:0,
-                    opacity:0.8,
-                  }}/>
-                )}
-              </div>
+              {(hovered) => (
+                <div style={{ display:"flex", alignItems:"center", gap:"7px", width:"100%" }}>
+                  <ProgressRing pct={pct} color={isActive ? "var(--accent-blue)" : "var(--accent-gray)"}/>
+                  {open && (
+                    <span style={{
+                      fontSize:"11px",
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                      flex:1,
+                    }}>
+                      {p.name}
+                    </span>
+                  )}
+                  {open && isActive && !hovered && (
+                    <div style={{
+                      width:"5px", height:"5px", borderRadius:"50%",
+                      background:"var(--accent-blue)", flexShrink:0,
+                      opacity:0.8,
+                    }}/>
+                  )}
+                  {open && hovered && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(p) }}
+                      title="Delete project"
+                      aria-label="Delete project"
+                      style={{
+                        ...iconBtn(),
+                        width:"20px", height:"20px",
+                        color:"var(--text-dim)",
+                        flexShrink:0,
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = "var(--accent-red)"}
+                      onMouseLeave={e => e.currentTarget.style.color = "var(--text-dim)"}
+                    >
+                      <IconTrash/>
+                    </button>
+                  )}
+                </div>
+              )}
             </HoverItem>
           )
         })}
@@ -384,6 +438,60 @@ export default function Sidebar({ open, onToggle }) {
             style={iconBtn({ color:"var(--text-muted)" })}>
             {dark ? <IconSun/> : <IconMoon/>}
           </button>
+        </div>
+      )}
+
+      {/* ── Delete confirmation ──────────────────────────────────────────── */}
+      {deleteTarget && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:1000,
+          background:"rgba(0,0,0,0.5)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+        }}
+        onClick={() => !deleting && setDeleteTarget(null)}
+        >
+          <div onClick={e => e.stopPropagation()} style={{
+            background:"var(--bg-panel)",
+            border:"1px solid var(--border)",
+            borderRadius:"10px",
+            padding:"18px",
+            width:"260px",
+            boxShadow:"0 8px 30px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{
+              fontSize:"13px", fontWeight:"600", color:"var(--text-primary)",
+              marginBottom:"6px",
+            }}>
+              Delete project?
+            </div>
+            <div style={{
+              fontSize:"11px", color:"var(--text-muted)", lineHeight:"1.5",
+              marginBottom:"16px",
+            }}>
+              "{deleteTarget.name}" and all of its progress will be permanently deleted. This can't be undone.
+            </div>
+            <div style={{ display:"flex", gap:"8px", justifyContent:"flex-end" }}>
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={{
+                background:"none", border:"1px solid var(--border)",
+                borderRadius:"6px", color:"var(--text-muted)",
+                fontSize:"11px", padding:"6px 12px",
+                cursor: deleting ? "default" : "pointer",
+                fontFamily:"inherit",
+              }}>
+                Cancel
+              </button>
+              <button onClick={handleDeleteConfirm} disabled={deleting} style={{
+                background:"var(--accent-red)", border:"none",
+                borderRadius:"6px", color:"#fff",
+                fontSize:"11px", fontWeight:"700", padding:"6px 12px",
+                cursor: deleting ? "wait" : "pointer",
+                opacity: deleting ? 0.7 : 1,
+                fontFamily:"inherit",
+              }}>
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
