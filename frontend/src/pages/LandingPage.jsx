@@ -216,11 +216,22 @@ export default function LandingPage() {
         borderBottom: "1px solid var(--border-subtle)",
       }}>
         <span style={{
+          display:"inline-flex",
           fontFamily:'"Fira Code", monospace',
-          fontSize:"13px", fontWeight:"700",
+          fontSize:"34px", fontWeight:"700",
           letterSpacing:"0.08em", color:"var(--text-primary)",
         }}>
-          PIP
+          {["P","I","P"].map((ch, i) => (
+            <span key={i} style={{
+              display:"inline-flex", flexDirection:"column", alignItems:"center",
+            }}>
+              {ch}
+              <span style={{
+                width:"70%", height:"2px", marginTop:"-6px", borderRadius:"1px",
+                background: ["#38bdf8","#f59e0b","#22c55e"][i],
+              }}/>
+            </span>
+          ))}
         </span>
         <div style={{ display:"flex", alignItems:"center", gap:"14px" }}>
           <span style={s.muted}>Personalised Interactive Pedagogy</span>
