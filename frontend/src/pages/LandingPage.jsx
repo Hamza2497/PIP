@@ -29,28 +29,26 @@ const C = {
   mastered:    "#22c55e",
   in_progress: "#f59e0b",
   active:      "#38bdf8",
-  ready:       "#3a3a46",
-  locked:      "#2a2a32",
+  ready:       "#52525b",
+  locked:      "#ef4444",
 }
-const BORDER = {
-  mastered:    "rgba(34,197,94,0.8)",
-  in_progress: "rgba(245,158,11,0.8)",
-  active:      "rgba(56,189,248,0.9)",
-  ready:       "rgba(82,82,91,0.55)",
-  locked:      "rgba(82,82,91,0.22)",
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`
 }
 
-function drawTree(ctx, w, h) {
+function drawTree(ctx, w, h, dark) {
   ctx.clearRect(0, 0, w, h)
   const pos = Object.fromEntries(NODES.map(n => [n.id, { x:n.x*w, y:n.y*h }]))
   const R = Math.min(w, h) * 0.046
+  const edgeClr = dark ? "rgba(255,255,255,0.13)" : "rgba(0,0,0,0.13)"
 
   EDGES.forEach(([a,b]) => {
     const p=pos[a], q=pos[b], mid=(p.y+q.y)/2
     ctx.beginPath()
     ctx.moveTo(p.x, p.y)
     ctx.bezierCurveTo(p.x, mid, q.x, mid, q.x, q.y)
-    ctx.strokeStyle = "rgba(255,255,255,0.06)"
+    ctx.strokeStyle = edgeClr
     ctx.lineWidth = 1
     ctx.stroke()
   })
@@ -58,21 +56,18 @@ function drawTree(ctx, w, h) {
   NODES.forEach(n => {
     const { x, y } = pos[n.id]
     const col = C[n.state]
-    const border = BORDER[n.state]
 
     // fill
     ctx.beginPath()
     ctx.arc(x, y, R, 0, Math.PI*2)
-    ctx.fillStyle = col
-    ctx.globalAlpha = n.state === "locked" ? 0.5 : 1
+    ctx.fillStyle = rgba(col, n.state === "locked" ? 0.08 : 0.13)
     ctx.fill()
-    ctx.globalAlpha = 1
 
     // stroke
     ctx.beginPath()
     ctx.arc(x, y, R, 0, Math.PI*2)
-    ctx.strokeStyle = border
-    ctx.lineWidth = 1.6
+    ctx.strokeStyle = rgba(col, n.state === "locked" ? 0.4 : 0.75)
+    ctx.lineWidth = 2
     ctx.stroke()
 
     // icon
@@ -81,7 +76,7 @@ function drawTree(ctx, w, h) {
       ctx.moveTo(x-R*0.42, y)
       ctx.lineTo(x-R*0.1,  y+R*0.38)
       ctx.lineTo(x+R*0.45, y-R*0.38)
-      ctx.strokeStyle = "rgba(255,255,255,0.9)"
+      ctx.strokeStyle = col
       ctx.lineWidth = 1.8; ctx.lineCap = "round"; ctx.stroke()
     } else if (n.state === "active") {
       ctx.beginPath()
@@ -98,6 +93,7 @@ function drawTree(ctx, w, h) {
 
 function StaticTree() {
   const ref = useRef(null)
+  const { dark } = useTheme()
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
@@ -106,13 +102,13 @@ function StaticTree() {
       const w=canvas.clientWidth, h=canvas.clientHeight
       canvas.width=w*devicePixelRatio; canvas.height=h*devicePixelRatio
       ctx.scale(devicePixelRatio, devicePixelRatio)
-      drawTree(ctx, w, h)
+      drawTree(ctx, w, h, dark)
     }
     draw()
     const ro = new ResizeObserver(draw)
     ro.observe(canvas)
     return () => ro.disconnect()
-  }, [])
+  }, [dark])
   return <canvas ref={ref} style={{ width:"100%", height:"100%", display:"block" }} />
 }
 
