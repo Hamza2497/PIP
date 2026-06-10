@@ -215,8 +215,9 @@ export default function LandingPage() {
       }}/>
 
       {/* ── Nav ────────────────────────────────────────────────────────────── */}
+      <div style={{ height: scrolled ? "57px" : "94px", transition:"height 200ms ease" }}/>
       <nav style={{
-        position:"sticky", top:0, zIndex:10,
+        position:"fixed", top:0, left:0, right:0, zIndex:10,
         padding: scrolled ? "8px 32px" : "20px 32px",
         display:"flex", alignItems:"center", justifyContent:"space-between",
         borderBottom: "1px solid var(--border-subtle)",
@@ -301,11 +302,12 @@ export default function LandingPage() {
         }}>
           Learn while building.
           <br/>
-          <span style={{
-            background:"linear-gradient(130deg, #f4f4f5 20%, #38bdf8 100%)",
+          <span key={dark ? "dark" : "light"} style={{
+            background:`linear-gradient(130deg, ${dark ? "#f4f4f5" : "#18181b"} 20%, #38bdf8 100%)`,
             WebkitBackgroundClip:"text",
-            WebkitTextFillColor:"transparent",
             backgroundClip:"text",
+            WebkitTextFillColor:"transparent",
+            color:"transparent",
           }}>
             At your pace.
           </span>
