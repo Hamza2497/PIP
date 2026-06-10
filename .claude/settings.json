@@ -33,7 +33,9 @@
       "Bash(xargs ls -la)",
       "Bash(pkill -f \"vite\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5173 http://localhost:5174)",
-      "Bash(disown)"
+      "Bash(disown)",
+      "Skill(run)",
+      "Skill(run:*)"
     ],
     "additionalDirectories": [
       "/tmp",

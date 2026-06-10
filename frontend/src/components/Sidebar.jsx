@@ -43,6 +43,29 @@ function IconMoon() {
   )
 }
 
+function Logo({ size = 14 }) {
+  return (
+    <span style={{
+      display:"inline-flex",
+      fontFamily:'"Fira Code", monospace',
+      fontSize:`${size}px`, fontWeight:"700",
+      letterSpacing:"0.08em", color:"var(--text-primary)",
+    }}>
+      {["P","I","P"].map((ch, i) => (
+        <span key={i} style={{
+          display:"inline-flex", flexDirection:"column", alignItems:"center",
+        }}>
+          {ch}
+          <span style={{
+            width:"70%", height:"1.5px", marginTop:"-3px", borderRadius:"1px",
+            background: ["#38bdf8","#f59e0b","#22c55e"][i],
+          }}/>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 function ProgressRing({ pct, color, size = 20 }) {
   const r = size / 2 - 2
   const circ = 2 * Math.PI * r
@@ -146,44 +169,12 @@ export default function Sidebar({ open, onToggle }) {
       {/* ── Header ───────────────────────────────────────────────────────── */}
       {open ? (
         <div style={{
-          display:"flex", alignItems:"center", gap:"6px",
+          display:"flex", alignItems:"center", justifyContent:"space-between", gap:"6px",
           padding:"10px 8px",
           minHeight:"48px",
           borderBottom:"1px solid var(--border-subtle)",
         }}>
-          {/* Avatar */}
-          <div style={{
-            width:"26px", height:"26px", borderRadius:"50%",
-            background:"linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)",
-            color:"#fff",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:"11px", fontWeight:"700", flexShrink:0,
-            fontFamily:'"Fira Sans", sans-serif',
-          }}>
-            {initials}
-          </div>
-
-          {/* Name + sign out */}
-          <div style={{ flex:1, overflow:"hidden", minWidth:0 }}>
-            <div style={{
-              fontSize:"11px", fontWeight:"600", color:"var(--text-primary)",
-              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-            }}>
-              {user?.name || "User"}
-            </div>
-            <button onClick={logout} style={{
-              ...iconBtn(), width:"auto", height:"auto",
-              fontSize:"10px", color:"var(--text-muted)", padding:0,
-            }}>
-              Sign out
-            </button>
-          </div>
-
-          {/* Theme toggle */}
-          <button onClick={toggleTheme} title={dark?"Light mode":"Dark mode"}
-            style={iconBtn({ color:"var(--text-muted)" })}>
-            {dark ? <IconSun/> : <IconMoon/>}
-          </button>
+          <Logo/>
 
           {/* Sidebar toggle — white when open */}
           <button onClick={onToggle} title="Collapse sidebar"
@@ -195,28 +186,13 @@ export default function Sidebar({ open, onToggle }) {
       ) : (
         <div style={{
           display:"flex", flexDirection:"column", alignItems:"center",
-          padding:"10px 0 8px", gap:"4px",
+          padding:"10px 0 8px",
           borderBottom:"1px solid var(--border-subtle)",
-          paddingBottom:"12px",
         }}>
-          <div style={{
-            width:"26px", height:"26px", borderRadius:"50%",
-            background:"linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)",
-            color:"#fff",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:"11px", fontWeight:"700",
-            fontFamily:'"Fira Sans", sans-serif',
-          }}>
-            {initials}
-          </div>
           <button onClick={onToggle} title="Expand sidebar"
             style={iconBtn({ color:"var(--text-muted)" })}
             aria-label="Expand sidebar">
             <IconPanelLeft active={false}/>
-          </button>
-          <button onClick={toggleTheme} title={dark?"Light mode":"Dark mode"}
-            style={iconBtn({ color:"var(--text-muted)" })}>
-            {dark ? <IconSun/> : <IconMoon/>}
           </button>
         </div>
       )}
@@ -345,6 +321,71 @@ export default function Sidebar({ open, onToggle }) {
           </p>
         )}
       </div>
+
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
+      {open ? (
+        <div style={{
+          display:"flex", alignItems:"center", gap:"6px",
+          padding:"10px 8px",
+          minHeight:"48px",
+          borderTop:"1px solid var(--border-subtle)",
+        }}>
+          {/* Avatar */}
+          <div style={{
+            width:"26px", height:"26px", borderRadius:"50%",
+            background:"linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)",
+            color:"#fff",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:"11px", fontWeight:"700", flexShrink:0,
+            fontFamily:'"Fira Sans", sans-serif',
+          }}>
+            {initials}
+          </div>
+
+          {/* Name + sign out */}
+          <div style={{ flex:1, overflow:"hidden", minWidth:0 }}>
+            <div style={{
+              fontSize:"11px", fontWeight:"600", color:"var(--text-primary)",
+              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+            }}>
+              {user?.name || "User"}
+            </div>
+            <button onClick={logout} style={{
+              ...iconBtn(), width:"auto", height:"auto",
+              fontSize:"10px", color:"var(--text-muted)", padding:0,
+            }}>
+              Sign out
+            </button>
+          </div>
+
+          {/* Theme toggle */}
+          <button onClick={toggleTheme} title={dark?"Light mode":"Dark mode"}
+            style={iconBtn({ color:"var(--text-muted)" })}>
+            {dark ? <IconSun/> : <IconMoon/>}
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          display:"flex", flexDirection:"column", alignItems:"center",
+          padding:"8px 0 10px", gap:"4px",
+          borderTop:"1px solid var(--border-subtle)",
+        }}>
+          <div style={{
+            width:"26px", height:"26px", borderRadius:"50%",
+            background:"linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)",
+            color:"#fff",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:"11px", fontWeight:"700",
+            fontFamily:'"Fira Sans", sans-serif',
+          }}>
+            {initials}
+          </div>
+          <button onClick={toggleTheme} title={dark?"Light mode":"Dark mode"}
+            style={iconBtn({ color:"var(--text-muted)" })}>
+            {dark ? <IconSun/> : <IconMoon/>}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
