@@ -404,8 +404,8 @@ export default function LandingPage() {
         <div style={{ width:"100%", maxWidth:"720px", marginBottom:"80px" }}>
           <div style={{
             fontFamily:'"Fira Code", monospace',
-            fontSize:"10px", color:"var(--text-muted)",
-            letterSpacing:"0.12em", fontWeight:"600",
+            fontSize:"14px", color:"var(--text-primary)",
+            letterSpacing:"0.2em", fontWeight:"700",
             marginBottom:"36px",
           }}>
             HOW IT WORKS
