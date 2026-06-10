@@ -59,6 +59,13 @@ async def google_auth(body: GoogleCredentialRequest):
         return response
 
 
+@router.post("/auth/logout")
+def logout():
+    response = JSONResponse({"status": "logged out"})
+    response.delete_cookie("session")
+    return response
+
+
 @router.get("/auth/login")
 def login():
     return RedirectResponse(build_google_auth_url(), status_code=302)
