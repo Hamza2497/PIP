@@ -67,6 +67,9 @@ export const api = {
   orientStream: (projectConceptId) =>
     streamFetch(`/checkpoint/orient/${projectConceptId}`),
 
+  getJournal: (projectConceptId) =>
+    apiFetch(`/checkpoint/journal/${projectConceptId}`),
+
   submitStream: (projectConceptId, claudeCodeOutput) =>
     streamFetch(`/checkpoint/submit/${projectConceptId}`, {
       method: "POST",

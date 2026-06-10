@@ -307,6 +307,12 @@ function CheckpointMessages({ messages, concept, sending, scrollRef, questionTex
   )
 }
 
+// ── Handoff sentence template (mirrors app/agents/checkpoint_agent.py) ────────
+const buildHandoffSentence = (conceptName) =>
+  `List everything we just built related to ${conceptName}: ` +
+  `what was implemented, what patterns were used, and any decisions made ` +
+  `— facts only, no explanations.`
+
 // ── MainArea ──────────────────────────────────────────────────────────────────
 export default function MainArea({ treeRef }) {
   const {
@@ -350,10 +356,14 @@ export default function MainArea({ treeRef }) {
   // Auto-scroll on new messages
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
-  // Auto-start orient when concept is selected with PENDING phase
+  // Start orient for PENDING concepts; resume from build journal otherwise
   useEffect(() => {
-    if (!activeConcept || currentPhase !== "PENDING") return
-    startOrient()
+    if (!activeConcept) return
+    if (activeConcept.phase?.toUpperCase() === "PENDING") {
+      startOrient()
+    } else {
+      loadJournalHistory()
+    }
   }, [activeConcept?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSetup      = !!pendingName && !activeProjectId
@@ -399,6 +409,54 @@ export default function MainArea({ treeRef }) {
       }
       return m
     })
+  }
+
+  // ── Resume from build journal (concept already past PENDING) ─────────────
+  const loadJournalHistory = async () => {
+    if (!activeConcept) return
+    setSending(true)
+    try {
+      const { entries } = await api.getJournal(activeConcept.id)
+      const history = []
+      let lastQuestion = null
+      for (const entry of entries) {
+        const c = entry.content
+        if (entry.phase === "orienting") {
+          if (c.orient_text) history.push({ role: "assistant", content: c.orient_text })
+          lastQuestion = null
+        } else if (entry.phase === "checkpointing") {
+          if (c.claude_code_output) history.push({ role: "user", content: c.claude_code_output })
+          if (c.teaching_note) history.push({ role: "assistant", content: c.teaching_note })
+          if (c.question) {
+            history.push({ role: "question", text: c.question })
+            lastQuestion = c.question
+          } else {
+            lastQuestion = null
+          }
+        } else if (entry.phase === "complete") {
+          if (c.answer) history.push({ role: "user", content: c.answer })
+          if (c.feedback !== undefined) {
+            history.push({ role: "score", confidence: c.score, feedback: c.feedback })
+          }
+          lastQuestion = null
+        } else if (c.role && c.text) {
+          history.push({ role: c.role === "user" ? "user" : "assistant", content: c.text })
+        }
+      }
+
+      const sentence = buildHandoffSentence(activeConcept.label)
+      history.push({ role: "handoff", sentence })
+      setHandoffSentence(sentence)
+      setMessages(history)
+
+      if (activeConcept.phase?.toUpperCase() === "CHECKPOINTING" && lastQuestion) {
+        setQuestionText(lastQuestion)
+      }
+    } catch (err) {
+      setMessages(m => [...m, { role: "error", content: `Error: ${err.message}` }])
+    } finally {
+      setSending(false)
+    }
   }
 
   // ── Orient stream ─────────────────────────────────────────────────────────

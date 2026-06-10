@@ -234,6 +234,36 @@ async def orient(
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+@router.get("/checkpoint/journal/{project_concept_id}")
+async def get_journal(
+    project_concept_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    pc, project, concept = await _get_project_concept_for_user(project_concept_id, user.id, session)
+
+    result = await session.execute(
+        select(BuildJournal)
+        .where(
+            BuildJournal.project_id == project.id,
+            BuildJournal.concept_id == concept.id,
+        )
+        .order_by(BuildJournal.created_at.asc())
+    )
+    entries = result.scalars().all()
+
+    return {
+        "entries": [
+            {
+                "phase": entry.phase.value,
+                "content": json.loads(entry.content),
+                "created_at": entry.created_at.isoformat(),
+            }
+            for entry in entries
+        ]
+    }
+
+
 class SubmitRequest(BaseModel):
     claude_code_output: str
 
