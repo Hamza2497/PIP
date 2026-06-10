@@ -18,9 +18,11 @@ function IconPanelRight({ active }) {
 }
 
 export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle, treeRef }) {
-  const { activeProjectId } = useProject()
+  const { activeProjectId, projects } = useProject()
   const [selectedConcept, setSelectedConcept] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  const activeProject = projects.find(p => p.id === activeProjectId)
 
   async function handleMaster() {
     if (!activeProjectId || !selectedConcept) return
@@ -103,6 +105,26 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
       }}>
         {activeProjectId ? (
           <>
+            <div style={{
+              padding: "10px 14px",
+              borderBottom: "1px solid var(--border-subtle)",
+              flexShrink: 0,
+            }}>
+              <div style={{
+                fontSize: "9px", fontWeight: "600", letterSpacing: "0.12em",
+                color: "var(--text-dim)", fontFamily: '"Fira Code",monospace',
+                marginBottom: "4px",
+              }}>
+                CONCEPT MAP
+              </div>
+              <div style={{
+                fontSize: "13px", fontWeight: "700", color: "var(--text-primary)",
+                fontFamily: '"Fira Sans", sans-serif',
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>
+                {activeProject?.name || "Untitled project"}
+              </div>
+            </div>
             <ConceptTree
               ref={treeRef}
               projectId={activeProjectId}
@@ -120,7 +142,7 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
             flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
             color: "var(--text-muted)", fontSize: "11px", textAlign: "center", padding: "16px",
           }}>
-            Select a project to see the concept tree
+            Select a project to see the concept map
           </div>
         )}
       </div>
