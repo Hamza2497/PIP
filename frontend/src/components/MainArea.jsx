@@ -33,7 +33,7 @@ function EmptyState() {
 }
 
 // ── SetupView ─────────────────────────────────────────────────────────────────
-function SetupView({ name, creating, conceptsFound }) {
+function SetupView({ name, creating, conceptsFound, error }) {
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -41,6 +41,15 @@ function SetupView({ name, creating, conceptsFound }) {
       padding: "40px 32px", gap: "18px",
       textAlign: "center",
     }}>
+      {error && (
+        <div style={{
+          border: "1px solid #ef4444", borderRadius: "6px",
+          padding: "10px 14px", background: "rgba(239,68,68,0.08)",
+          color: "#ef4444", fontSize: "12px", maxWidth: "380px",
+        }}>
+          {error}
+        </div>
+      )}
       {creating ? (
         <>
           <svg width="32" height="32" viewBox="0 0 16 16"
@@ -313,6 +322,7 @@ export default function MainArea({ treeRef }) {
   const [sending, setSending]           = useState(false)
   const [roadmapKey, setRoadmapKey]     = useState(0)
   const [conceptsFound, setConceptsFound] = useState([])
+  const [setupError, setSetupError]     = useState(null)
   // Checkpoint phase state
   const [currentPhase, setCurrentPhase] = useState("PENDING")
   const [handoffSentence, setHandoffSentence] = useState("")
@@ -330,6 +340,12 @@ export default function MainArea({ treeRef }) {
     setQuestionText(null)
     setAnswerInput("")
   }, [activeConcept])
+
+  // Reset setup error when starting a new project setup
+  useEffect(() => {
+    setSetupError(null)
+    setConceptsFound([])
+  }, [pendingName])
 
   // Auto-scroll on new messages
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
@@ -486,6 +502,7 @@ export default function MainArea({ treeRef }) {
       if (isSetup) {
         setConceptsFound([])
         setAnnotatedPlan(null)
+        setSetupError(null)
         const stacksResult = await api.identifyStacks(`${pendingName}\n${text}`)
         const stacks = stacksResult.stacks || ["General"]
         const res = await api.generateRoadmap(`${pendingName}\n${text}`, pendingName, stacks)
@@ -498,7 +515,11 @@ export default function MainArea({ treeRef }) {
           } else if (ev.type === "done") {
             projectId = ev.project_id
           } else if (ev.type === "error") {
-            throw new Error(ev.message)
+            res.body?.cancel()
+            setConceptsFound([])
+            setAnnotatedPlan(null)
+            setSetupError(ev.message)
+            break
           }
         }
         if (projectId) {
@@ -573,7 +594,7 @@ export default function MainArea({ treeRef }) {
       {/* Content */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {!hasProject && <EmptyState/>}
-        {isSetup      && <SetupView name={pendingName} creating={sending} conceptsFound={conceptsFound}/>}
+        {isSetup      && <SetupView name={pendingName} creating={sending} conceptsFound={conceptsFound} error={setupError}/>}
         {isRoadmap    && <RoadmapView key={roadmapKey}/>}
         {isCheckpoint && (
           <CheckpointMessages
