@@ -144,20 +144,20 @@ function IconMoon() {
 const STEPS = [
   {
     n: "01",
-    title: "Describe what you want to learn",
-    body: "Type any subject — from calculus to guitar theory. PIP maps out every concept you need to reach mastery.",
+    title: "Describe your project",
+    body: "Tell PIP what you're building. It identifies the concepts the project will teach you, maps out their dependencies, and gives you a structured order to work through them.",
     color: "var(--accent-blue)",
   },
   {
     n: "02",
-    title: "Work through checkpoints",
-    body: "Each concept gets a focused conversation. PIP adapts to your answers, filling gaps before moving forward.",
+    title: "Build, then check in",
+    body: "Work on each part. When you're done, tell PIP what you built. It fills in any gaps and asks one question to make sure the concept landed.",
     color: "var(--accent-amber)",
   },
   {
     n: "03",
-    title: "Watch your tree grow",
-    body: "Mastered concepts light up green. Your progress is visible at a glance — and always personalised to you.",
+    title: "Your knowledge compounds",
+    body: "Every concept you complete updates your personal tree. PIP tracks your confidence across projects — so it knows what to reinforce and what to skip.",
     color: "var(--accent-green)",
   },
 ]
