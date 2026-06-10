@@ -136,6 +136,7 @@ async def get_project(
     return {
         "id": str(project.id),
         "name": project.name or stack.name,
+        "annotated_plan": project.annotated_plan,
         "concepts": [
             {
                 "id": str(pc.id),
@@ -466,6 +467,10 @@ async def roadmap_generate(
                 for step in annotated:
                     for part in step.get("parts", []):
                         part["project_concept_id"] = pc_id_by_name.get(part["concept_name"])
+
+                project.annotated_plan = annotated
+                await session.commit()
+
                 yield f'data: {json.dumps({"type": "plan_annotated", "parts": annotated})}\n\n'
 
                 # 10. Mermaid diagram

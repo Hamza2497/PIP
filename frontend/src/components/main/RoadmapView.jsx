@@ -3,55 +3,86 @@ import { api } from "../../api"
 import { useProject } from "../../context/ProjectContext"
 
 // ── AnnotatedPlan ─────────────────────────────────────────────────────────────
+function IconChevron({ collapsed }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      style={{
+        transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+        transition: "transform 150ms ease",
+        flexShrink: 0,
+      }}>
+      <polyline points="2,4 6,8 10,4"/>
+    </svg>
+  )
+}
+
 function AnnotatedPlan({ plan, concepts, onStartPart }) {
+  const [collapsed, setCollapsed] = useState({})
+
+  const toggleStep = (stepNumber) => {
+    setCollapsed(prev => ({ ...prev, [stepNumber]: !prev[stepNumber] }))
+  }
+
   return (
     <div style={{ marginTop: "20px" }}>
-      {plan.map(step => (
-        <div key={step.step_number} style={{ marginBottom: "16px" }}>
-          <div style={{
-            fontSize: "11px", fontWeight: "600", color: "#71717a",
-            marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em",
-          }}>
-            Step {step.step_number} — {step.step_title}
-          </div>
-          {(step.parts || []).map(part => {
-            const concept = concepts?.find(c => c.id === part.project_concept_id)
-            return (
-              <div key={part.part_number} style={{
-                display: "flex", alignItems: "flex-start", gap: "12px",
-                padding: "10px 12px",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px", marginBottom: "6px",
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "12px", fontWeight: "500", color: "var(--text-primary)" }}>
-                    {part.concept_name}
+      {plan.map(step => {
+        const isCollapsed = !!collapsed[step.step_number]
+        return (
+          <div key={step.step_number} style={{ marginBottom: "16px" }}>
+            <button
+              onClick={() => toggleStep(step.step_number)}
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                background: "none", border: "none", padding: 0,
+                marginBottom: "8px", cursor: "pointer",
+                fontSize: "11px", fontWeight: "600", color: "#71717a",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+                fontFamily: "inherit", width: "100%", textAlign: "left",
+              }}
+            >
+              <IconChevron collapsed={isCollapsed}/>
+              Step {step.step_number} — {step.step_title}
+            </button>
+            {!isCollapsed && (step.parts || []).map(part => {
+              const concept = concepts?.find(c => c.id === part.project_concept_id)
+              return (
+                <div key={part.part_number} style={{
+                  display: "flex", alignItems: "flex-start", gap: "12px",
+                  padding: "10px 12px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px", marginBottom: "6px",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "12px", fontWeight: "500", color: "var(--text-primary)" }}>
+                      {part.concept_name}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "2px" }}>
+                      {part.what_to_build}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "2px" }}>
-                    {part.what_to_build}
-                  </div>
+                  {concept && concept.state !== "mastered" && (
+                    <button
+                      onClick={() => onStartPart(part, concept)}
+                      style={{
+                        fontSize: "11px", padding: "4px 10px",
+                        background: "none", border: "1px solid var(--border)",
+                        borderRadius: "4px", color: "var(--text-muted)",
+                        cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = "var(--text-dim)"}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+                    >
+                      Start
+                    </button>
+                  )}
                 </div>
-                {concept && concept.state !== "mastered" && (
-                  <button
-                    onClick={() => onStartPart(part, concept)}
-                    style={{
-                      fontSize: "11px", padding: "4px 10px",
-                      background: "none", border: "1px solid var(--border)",
-                      borderRadius: "4px", color: "var(--text-muted)",
-                      cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = "var(--text-dim)"}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-                  >
-                    Start
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ))}
+              )
+            })}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -394,22 +425,25 @@ export default function RoadmapView() {
       )}
 
       {/* ── Annotated plan ────────────────────────────────────────────── */}
-      {annotatedPlan && annotatedPlan.length > 0 && (
-        <>
-          <div style={{
-            fontSize:"9px", fontWeight:"600", letterSpacing:"0.12em",
-            color:"var(--text-dim)", fontFamily:'"Fira Code",monospace',
-            marginTop:"28px", marginBottom:"10px",
-          }}>
-            LEARNING PLAN
-          </div>
-          <AnnotatedPlan
-            plan={annotatedPlan}
-            concepts={project?.concepts}
-            onStartPart={handleStartPart}
-          />
-        </>
-      )}
+      {(() => {
+        const plan = annotatedPlan?.length > 0 ? annotatedPlan : project.annotated_plan
+        return plan && plan.length > 0 && (
+          <>
+            <div style={{
+              fontSize:"9px", fontWeight:"600", letterSpacing:"0.12em",
+              color:"var(--text-dim)", fontFamily:'"Fira Code",monospace',
+              marginTop:"28px", marginBottom:"10px",
+            }}>
+              LEARNING PLAN
+            </div>
+            <AnnotatedPlan
+              plan={plan}
+              concepts={project?.concepts}
+              onStartPart={handleStartPart}
+            />
+          </>
+        )
+      })()}
     </div>
   )
 }

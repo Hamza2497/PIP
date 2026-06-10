@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { layoutTree } from '../../utils/treeLayout'
 import { drawEdges, drawNode } from './treeRenderer'
 import { api } from '../../api'
@@ -47,6 +47,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
   const canvasRef  = useRef(null)
   const wrapRef    = useRef(null)
   const { dark }   = useTheme()
+  const [loading, setLoading] = useState(true)
   const stateRef  = useRef({
     nodes: [], edges: [], stars: [],
     panX: 0, panY: 0, targetPanX: 0, targetPanY: 0,
@@ -94,8 +95,12 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
   // ── Load project ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!projectId) return
+    setLoading(true)
+    const s = stateRef.current
+    s.nodes = []
+    s.edges = []
+    s.hovId = null; s.selId = null
     api.getProject(projectId).then(data => {
-      const s = stateRef.current
       const concepts = data.concepts.map(c => ({
         ...c, name: c.label, conf: c.confidence ?? null,
       }))
@@ -116,7 +121,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
       s.fitZoom = cam.zoom
       s.panX = cam.panX; s.panY = cam.panY; s.zoom = cam.zoom
       s.targetPanX = cam.panX; s.targetPanY = cam.panY; s.targetZoom = cam.zoom
-    }).catch(console.error)
+    }).catch(console.error).finally(() => setLoading(false))
   }, [projectId, refreshKey])
 
   // ── Canvas + render loop ───────────────────────────────────────────────────
@@ -314,6 +319,22 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
     }}>
       {/* Canvas fills the wrapper via CSS; buffer is set in JS */}
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+
+      {loading && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 5,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '8px',
+          background: '#030304',
+          color: 'var(--text-muted)', fontSize: '12px',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: 'spin 0.9s linear infinite' }}>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <circle cx="8" cy="8" r="6" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeDasharray="20 18"/>
+          </svg>
+          Loading…
+        </div>
+      )}
 
       <div style={{
         position: 'absolute', bottom: 12, right: 10,

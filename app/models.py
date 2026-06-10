@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base, Vector
@@ -50,6 +51,7 @@ class Project(Base):
     stack_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("stacks.id"), nullable=True)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
     plan: Mapped[str] = mapped_column(Text)
+    annotated_plan: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String, default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
