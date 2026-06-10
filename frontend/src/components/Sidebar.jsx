@@ -327,7 +327,7 @@ export default function Sidebar({ open, onToggle }) {
         <div style={{
           display:"flex", alignItems:"center", gap:"6px",
           padding:"10px 8px",
-          minHeight:"48px",
+          minHeight:"57px",
           borderTop:"1px solid var(--border-subtle)",
         }}>
           {/* Avatar */}
