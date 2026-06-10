@@ -169,7 +169,7 @@ const LEGEND = [
   ["#38bdf8", "Active"],
   ["#f59e0b", "Progress"],
   ["#52525b", "Ready"],
-  ["#2a2a32", "Locked"],
+  ["#ef4444", "Locked"],
 ]
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -353,7 +353,7 @@ export default function LandingPage() {
             display:"flex", alignItems:"center", justifyContent:"space-between",
             zIndex:2,
             borderBottom:"1px solid var(--border-subtle)",
-            background:"rgba(13,13,15,0.7)",
+            background:"var(--bg-panel)",
             backdropFilter:"blur(8px)",
           }}>
             <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
