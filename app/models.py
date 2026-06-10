@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime
+from sqlalchemy import BigInteger, DateTime, Identity
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
@@ -77,6 +77,7 @@ class Concept(Base):
     description: Mapped[str] = mapped_column(Text)
     description_embedding: Mapped[list[float]] = mapped_column(Vector(3072), nullable=True)
     domain: Mapped[str] = mapped_column(String)
+    creation_seq: Mapped[int] = mapped_column(BigInteger, Identity(always=False), nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
@@ -85,6 +86,17 @@ class ConceptPrerequisite(Base):
 
     concept_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), primary_key=True)
     prerequisite_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), primary_key=True)
+
+
+class OverruledPrerequisite(Base):
+    __tablename__ = "overruled_prerequisites"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    prereq_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), nullable=False)
+    concept_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("concepts.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("projects.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class UserConcept(Base):

@@ -9,3 +9,4 @@ python-jose[cryptography]
 sqlalchemy[asyncio]
 asyncpg
 pgvector
+alembic

@@ -13,6 +13,7 @@ dependencies = [
     "asyncpg",
     "sqlalchemy[asyncio]",
     "pgvector",
+    "alembic",
     "python-jose[cryptography]",
     "python-multipart",
 ]

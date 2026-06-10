@@ -1,5 +1,5 @@
 from app.database import Base, engine
-from app.models import User, Stack, Concept, ConceptPrerequisite, UserConcept, Project, ProjectConcept, BuildJournal, ApiKey  # noqa: F401
+from app.models import User, Stack, Concept, ConceptPrerequisite, OverruledPrerequisite, UserConcept, Project, ProjectConcept, BuildJournal, ApiKey  # noqa: F401
 
 
 async def create_tables() -> None:

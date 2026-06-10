@@ -23,6 +23,7 @@ from app.routers.chat import _client
 from app.services.concepts import get_or_create_concept
 from app.session import get_current_user
 from app.utils.graph import topological_sort
+from app.utils.prereq_graph import PrerequisiteGraph
 
 router = APIRouter()
 
@@ -413,7 +414,7 @@ async def roadmap_generate(
 
                 # 4. Embed + deduplicate
                 concept_id_map: dict[str, object] = {}  # name -> concept_id
-                prereq_pairs: list[tuple] = []  # (concept_id, prereq_id) tuples
+                concept_obj_map: dict[str, object] = {}  # name -> Concept ORM object
 
                 for stack_name, raw_concept in all_raw_concepts:
                     stack_id = stack_records[stack_name].id
@@ -426,8 +427,14 @@ async def roadmap_generate(
                     )
                     await session.flush()
                     concept_id_map[raw_concept["name"]] = concept.id
+                    concept_obj_map[raw_concept["name"]] = concept
 
                     yield f'data: {json.dumps({"type": "concept_added", "concept": {"name": raw_concept["name"], "domain": raw_concept.get("domain", "")}})}\n\n'
+
+                # 5. Build the prerequisite graph — rank-invariant by construction.
+                graph = PrerequisiteGraph(project_id=str(project.id))
+                for concept in concept_obj_map.values():
+                    graph.add_concept(concept)
 
                 # Wire prerequisites (second pass so all concepts exist)
                 for stack_name, raw_concept in all_raw_concepts:
@@ -438,24 +445,25 @@ async def roadmap_generate(
                         prereq_id = concept_id_map.get(prereq_name)
                         if prereq_id is None:
                             continue
-                        stmt = (
-                            pg_insert(ConceptPrerequisite)
-                            .values(concept_id=concept_id, prerequisite_id=prereq_id)
-                            .on_conflict_do_nothing()
-                        )
-                        await session.execute(stmt)
-                        prereq_pairs.append((concept_id, prereq_id))
+                        if graph.add_prerequisite(str(prereq_id), str(concept_id)):
+                            stmt = (
+                                pg_insert(ConceptPrerequisite)
+                                .values(concept_id=concept_id, prerequisite_id=prereq_id)
+                                .on_conflict_do_nothing()
+                            )
+                            await session.execute(stmt)
 
-                # 5-6. Topological sort
-                concept_ids = list(concept_id_map.values())
+                # 6. Learning order via the prerequisite graph (replaces topological_sort).
                 try:
-                    ordered_ids = topological_sort(concept_ids, prereq_pairs)
-                except ValueError as e:
+                    ordered_ids = graph.learning_order()
+                except AssertionError as e:
                     yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'
                     return
 
+                order_index_by_concept_id = {cid: i for i, cid in enumerate(ordered_ids)}
+
                 # 7. Build id->name map for annotation
-                id_to_name = {v: k for k, v in concept_id_map.items()}
+                id_to_name = {str(v): k for k, v in concept_id_map.items()}
                 ordered_concepts_for_annotation = [
                     {"name": id_to_name[oid]} for oid in ordered_ids
                 ]
@@ -464,7 +472,6 @@ async def roadmap_generate(
                 annotated = await annotate_plan(plan, ordered_concepts_for_annotation)
 
                 # 9. Create project_concept records first so each part gets an ID
-                order_index = 0
                 pc_id_by_name: dict[str, str] = {}
                 for step in annotated:
                     for part in step.get("parts", []):
@@ -474,14 +481,16 @@ async def roadmap_generate(
                         pc = ProjectConcept(
                             project_id=project.id,
                             concept_id=concept_id,
-                            order_index=order_index,
+                            order_index=order_index_by_concept_id[str(concept_id)],
                             what_to_build=part.get("what_to_build"),
                             phase=ConceptPhase.PENDING,
                         )
                         session.add(pc)
                         await session.flush()
                         pc_id_by_name[part["concept_name"]] = str(pc.id)
-                        order_index += 1
+
+                # 9b. Persist any prerequisite edges dropped for violating the rank invariant.
+                await graph.flush_overruled(session)
                 await session.commit()
 
                 for step in annotated:
