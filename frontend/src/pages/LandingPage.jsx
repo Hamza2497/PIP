@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { GoogleLogin } from "@react-oauth/google"
 import { api } from "../api"
@@ -178,6 +178,13 @@ export default function LandingPage() {
   const { login }  = useAuth()
   const navigate   = useNavigate()
   const { dark, toggle: toggleTheme } = useTheme()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   const handleSuccess = useCallback(async ({ credential }) => {
     try {
@@ -198,7 +205,6 @@ export default function LandingPage() {
       background: "var(--bg-base)",
       display: "flex",
       flexDirection: "column",
-      overflow: "hidden",
     }}>
       {/* ── Ambient glow ───────────────────────────────────────────────────── */}
       <div style={{
@@ -210,17 +216,20 @@ export default function LandingPage() {
 
       {/* ── Nav ────────────────────────────────────────────────────────────── */}
       <nav style={{
-        position:"relative", zIndex:1,
-        padding:"20px 32px",
+        position:"sticky", top:0, zIndex:10,
+        padding: scrolled ? "8px 32px" : "20px 32px",
         display:"flex", alignItems:"center", justifyContent:"space-between",
         borderBottom: "1px solid var(--border-subtle)",
+        background:"var(--bg-base)",
+        transition:"padding 200ms ease",
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:"14px" }}>
           <span style={{
             display:"inline-flex",
             fontFamily:'"Fira Code", monospace',
-            fontSize:"34px", fontWeight:"700",
+            fontSize: scrolled ? "20px" : "34px", fontWeight:"700",
             letterSpacing:"0.08em", color:"var(--text-primary)",
+            transition:"font-size 200ms ease",
           }}>
             {["P","I","P"].map((ch, i) => (
               <span key={i} style={{
@@ -234,7 +243,7 @@ export default function LandingPage() {
               </span>
             ))}
           </span>
-          <span style={s.muted}>Personalised Interactive Pedagogy</span>
+          {!scrolled && <span style={s.muted}>Personalised Interactive Pedagogy</span>}
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"14px" }}>
           <button onClick={toggleTheme} title={dark?"Light mode":"Dark mode"} style={{
@@ -290,7 +299,7 @@ export default function LandingPage() {
           maxWidth:"740px",
           fontFamily:'"Fira Sans", sans-serif',
         }}>
-          Learn anything.
+          Learn while building.
           <br/>
           <span style={{
             background:"linear-gradient(130deg, #f4f4f5 20%, #38bdf8 100%)",
@@ -310,8 +319,8 @@ export default function LandingPage() {
           lineHeight:"1.7",
           maxWidth:"460px",
         }}>
-          PIP builds a personalised concept tree for any subject,
-          then teaches you through it — one checkpoint at a time.
+          PIP designs a personalised concept tree for any stack,
+          then teaches you through it — one concept at a time.
         </p>
 
         {/* CTA */}
