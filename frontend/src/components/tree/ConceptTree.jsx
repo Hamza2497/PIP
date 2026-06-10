@@ -8,19 +8,44 @@ const R = 18
 const ZOOM_MAX = 3.0
 const EASE = 0.13
 
+function getBBox(nodes) {
+  const pad = R + 32
+  return {
+    minX: Math.min(...nodes.map(n => n.cx)) - pad,
+    maxX: Math.max(...nodes.map(n => n.cx)) + pad,
+    minY: Math.min(...nodes.map(n => n.cy)) - pad,
+    maxY: Math.max(...nodes.map(n => n.cy)) + pad,
+  }
+}
+
 function fitCamera(nodes, W, H) {
   if (!nodes.length) return { panX: W / 2, panY: H / 2, zoom: 1 }
-  const pad = R + 32
-  const minX = Math.min(...nodes.map(n => n.cx)) - pad
-  const maxX = Math.max(...nodes.map(n => n.cx)) + pad
-  const minY = Math.min(...nodes.map(n => n.cy)) - pad
-  const maxY = Math.max(...nodes.map(n => n.cy)) + pad
+  const { minX, maxX, minY, maxY } = getBBox(nodes)
   const zoom = Math.min(W / (maxX - minX), H / (maxY - minY), 1.3) * 0.88
   return {
     panX: (W - (maxX - minX) * zoom) / 2 - minX * zoom,
     panY: (H - (maxY - minY) * zoom) / 2 - minY * zoom,
     zoom,
   }
+}
+
+// Keep the content's bounding box from drifting entirely off screen.
+const PAN_VISIBLE_MARGIN = 80
+
+function clampPan(s) {
+  if (!s.bbox) return
+  const { minX, maxX, minY, maxY } = s.bbox
+  const z = s.targetZoom
+
+  const minPanX = PAN_VISIBLE_MARGIN - maxX * z
+  const maxPanX = s.W - PAN_VISIBLE_MARGIN - minX * z
+  const loX = Math.min(minPanX, maxPanX), hiX = Math.max(minPanX, maxPanX)
+  s.targetPanX = Math.min(Math.max(s.targetPanX, loX), hiX)
+
+  const minPanY = PAN_VISIBLE_MARGIN - maxY * z
+  const maxPanY = s.H - PAN_VISIBLE_MARGIN - minY * z
+  const loY = Math.min(minPanY, maxPanY), hiY = Math.max(minPanY, maxPanY)
+  s.targetPanY = Math.min(Math.max(s.targetPanY, loY), hiY)
 }
 
 function ZoomBtn({ onClick, title, children }) {
@@ -77,6 +102,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
     s.targetPanX = cx - (cx - s.targetPanX) * ratio
     s.targetPanY = cy - (cy - s.targetPanY) * ratio
     s.targetZoom = newZoom
+    clampPan(s)
   }, [])
 
   useImperativeHandle(ref, () => ({
@@ -110,6 +136,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
       })
       s.nodes = layoutTree(concepts)
       s.edges = edgeList
+      s.bbox = s.nodes.length ? getBBox(s.nodes) : null
       s.hovId = null; s.selId = null
       s.stars = Array.from({ length: 220 }, () => ({
         x: (Math.random() - 0.15) * 1400 - 100,
@@ -141,6 +168,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
       canvas.width  = w * DPR
       canvas.height = h * DPR
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+      clampPan(stateRef.current)
     }
 
     // Size from container, not a hardcoded constant
@@ -223,6 +251,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
         const sc = e.deltaMode === 1 ? 20 : 1
         s.targetPanX -= e.deltaX * sc
         s.targetPanY -= e.deltaY * sc
+        clampPan(s)
       }
     }
 
@@ -264,6 +293,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
         if (Math.hypot(dx, dy) > 4) s.dragMoved = true
         s.targetPanX = s.startPanX + dx
         s.targetPanY = s.startPanY + dy
+        clampPan(s)
         return
       }
       const rect = wrap.getBoundingClientRect()
