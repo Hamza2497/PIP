@@ -102,7 +102,14 @@ async def generate_concept_tree(
             f"\n\nConcepts already generated for this project: {', '.join(existing_concept_names)}. "
             "Do NOT generate a concept that overlaps with any of the above. "
             "If a concept from the list above applies to this step, reference it by "
-            "exact name — do not create a new variant of it."
+            "exact name — do not create a new variant of it. "
+            "If you have already generated a concept for a technology or pattern "
+            "(e.g. 'argparse subparsers'), do not generate a second concept for "
+            "implementing or applying that same technology (e.g. 'Implementing CLI "
+            "subcommands'). The implementation is covered by learning the concept itself. "
+            "Only generate concepts that are definitively required by this step. Do not "
+            "generate concepts described as 'potentially useful', 'optional', or 'not "
+            "strictly required'."
         )
     response = await _client.aio.models.generate_content(
         model=_MODEL,
