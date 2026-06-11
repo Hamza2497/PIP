@@ -15,10 +15,8 @@ export default function MobileBar({ onMenuClick, onTreeClick, sidebarOpen, treeO
 
   return (
     <div style={{
-      position: "fixed",
-      bottom: 0,
-      left: 0,
-      right: 0,
+      position: "relative",
+      flexShrink: 0,
       height: "52px",
       background: "var(--bg-panel)",
       borderTop: "1px solid var(--border)",
