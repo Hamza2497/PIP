@@ -145,7 +145,7 @@ const STEPS = [
   {
     n: "01",
     title: "Describe your project",
-    body: "Tell PIP what you're building. It identifies the concepts the project will teach you, maps out their dependencies, and gives you a structured order to work through them.",
+    body: "Tell PIP what you're build plan is. It identifies the concepts the project will teach you, maps out their dependencies, and gives you a structured order to work through them.",
     color: "var(--accent-blue)",
   },
   {
