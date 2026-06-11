@@ -41,7 +41,7 @@ export default function AppShell() {
 
   if (isMobile) {
     return (
-      <div style={{ height: "100vh", overflow: "hidden", background: "var(--bg-base)", position: "relative", display: "flex", flexDirection: "column" }}>
+      <div style={{ height: "100dvh", overflow: "hidden", background: "var(--bg-base)", position: "relative", display: "flex", flexDirection: "column" }}>
         <MainArea treeRef={treeRef} />
         <MobileBar
           onMenuClick={() => setMobileSidebarOpen(p => !p)}
