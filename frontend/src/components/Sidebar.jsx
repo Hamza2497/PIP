@@ -196,7 +196,7 @@ export default function Sidebar({ open, onToggle, mobile = false }) {
     <div style={{
       width: open ? `${SIDEBAR_OPEN_W}px` : `${SIDEBAR_CLOSED_W}px`,
       minWidth: open ? `${SIDEBAR_OPEN_W}px` : `${SIDEBAR_CLOSED_W}px`,
-      height: "100vh",
+      height: mobile ? "100dvh" : "100vh",
       background: "var(--bg-panel)",
       borderRight: "1px solid var(--border)",
       display: "flex", flexDirection: "column",

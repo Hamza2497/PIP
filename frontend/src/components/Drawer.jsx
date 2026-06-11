@@ -1,4 +1,4 @@
-export default function Drawer({ open, onClose, side, children }) {
+export default function Drawer({ open, onClose, side, children, fullWidth = false }) {
   return (
     <>
       {open && (
@@ -16,8 +16,9 @@ export default function Drawer({ open, onClose, side, children }) {
         position: "fixed",
         top: 0,
         [side]: 0,
-        width: "100vw",
-        height: "100vh",
+        width: fullWidth ? "100vw" : "fit-content",
+        maxWidth: "100vw",
+        height: "100dvh",
         background: "var(--bg-panel)",
         zIndex: 50,
         transform: open

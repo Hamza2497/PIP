@@ -346,6 +346,7 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
       background: '#030304',
       overflow: 'hidden',
       userSelect: 'none',
+      touchAction: 'none',
     }}>
       {/* Canvas fills the wrapper via CSS; buffer is set in JS */}
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />

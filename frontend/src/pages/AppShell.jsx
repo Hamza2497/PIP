@@ -52,7 +52,7 @@ export default function AppShell() {
         <Drawer open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} side="left">
           <Sidebar open={true} onToggle={() => setMobileSidebarOpen(false)} mobile={true} />
         </Drawer>
-        <Drawer open={mobileTreeOpen} onClose={() => setMobileTreeOpen(false)} side="right">
+        <Drawer open={mobileTreeOpen} onClose={() => setMobileTreeOpen(false)} side="right" fullWidth={true}>
           <TreePanel open={true} mobile={true} onToggle={() => setMobileTreeOpen(false)} treeRef={treeRef} />
         </Drawer>
       </div>
