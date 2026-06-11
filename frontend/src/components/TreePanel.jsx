@@ -42,7 +42,7 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
     <div style={{
       width: panelW,
       minWidth: panelW,
-      height: mobile ? "100dvh" : "100vh",
+      height: mobile ? "100svh" : "100vh",
       display: "flex",
       flexDirection: "row",
       transition: open ? "none" : "width 200ms ease, min-width 200ms ease",

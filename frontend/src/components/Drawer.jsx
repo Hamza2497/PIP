@@ -18,7 +18,7 @@ export default function Drawer({ open, onClose, side, children, fullWidth = fals
         [side]: 0,
         width: fullWidth ? "100vw" : "fit-content",
         maxWidth: "100vw",
-        height: "100dvh",
+        height: "100svh",
         background: "var(--bg-panel)",
         zIndex: 50,
         transform: open
