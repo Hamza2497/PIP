@@ -1,8 +1,8 @@
-export default function MobileBar({ onMenuClick, onTreeClick }) {
-  const btnStyle = {
-    background: "none",
+export default function MobileBar({ onMenuClick, onTreeClick, sidebarOpen, treeOpen }) {
+  const btnStyle = (active) => ({
+    background: active ? "rgba(56,189,248,0.1)" : "none",
     border: "none",
-    color: "var(--text-muted)",
+    color: active ? "var(--text-primary)" : "var(--text-muted)",
     cursor: "pointer",
     fontSize: "22px",
     display: "flex",
@@ -11,7 +11,7 @@ export default function MobileBar({ onMenuClick, onTreeClick }) {
     width: "44px",
     height: "44px",
     borderRadius: "8px",
-  }
+  })
 
   return (
     <div style={{
@@ -26,12 +26,12 @@ export default function MobileBar({ onMenuClick, onTreeClick }) {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "0 16px",
-      zIndex: 40,
+      zIndex: 60,
     }}>
-      <button onClick={onMenuClick} style={btnStyle} title="Menu">
+      <button onClick={onMenuClick} style={btnStyle(sidebarOpen)} title="Menu">
         ☰
       </button>
-      <button onClick={onTreeClick} style={btnStyle} title="Concept tree">
+      <button onClick={onTreeClick} style={btnStyle(treeOpen)} title="Concept tree">
         🌿
       </button>
     </div>

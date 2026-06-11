@@ -51,6 +51,8 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
       flexShrink: 0,
       overflow: "hidden",
       position: "relative",
+      paddingBottom: mobile ? "52px" : 0,
+      boxSizing: "border-box",
     }}>
       {/* ── Resize handle — drag to resize between 25–45% ───────────────── */}
       {open && onResizeStart && (
@@ -113,21 +115,40 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
               padding: "10px 14px",
               borderBottom: "1px solid var(--border-subtle)",
               flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px",
             }}>
-              <div style={{
-                fontSize: "9px", fontWeight: "600", letterSpacing: "0.12em",
-                color: "var(--text-dim)", fontFamily: '"Fira Code",monospace',
-                marginBottom: "4px",
-              }}>
-                CONCEPT MAP
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: "9px", fontWeight: "600", letterSpacing: "0.12em",
+                  color: "var(--text-dim)", fontFamily: '"Fira Code",monospace',
+                  marginBottom: "4px",
+                }}>
+                  CONCEPT MAP
+                </div>
+                <div style={{
+                  fontSize: "13px", fontWeight: "700", color: "var(--text-primary)",
+                  fontFamily: '"Fira Sans", sans-serif',
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>
+                  {activeProject?.name || "Untitled project"}
+                </div>
               </div>
-              <div style={{
-                fontSize: "13px", fontWeight: "700", color: "var(--text-primary)",
-                fontFamily: '"Fira Sans", sans-serif',
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>
-                {activeProject?.name || "Untitled project"}
-              </div>
+              {mobile && onToggle && (
+                <button
+                  onClick={onToggle}
+                  title="Close concept tree"
+                  aria-label="Close concept tree"
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "var(--text-muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "28px", height: "28px", borderRadius: "6px",
+                    flexShrink: 0,
+                  }}
+                >
+                  <IconPanelRight active={true} />
+                </button>
+              )}
             </div>
             <ConceptTree
               ref={treeRef}
@@ -143,9 +164,27 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
           </>
         ) : (
           <div style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+            flex: 1, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
             color: "var(--text-muted)", fontSize: "11px", textAlign: "center", padding: "16px",
+            position: "relative",
           }}>
+            {mobile && onToggle && (
+              <button
+                onClick={onToggle}
+                title="Close concept tree"
+                aria-label="Close concept tree"
+                style={{
+                  position: "absolute", top: "10px", right: "10px",
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "var(--text-muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: "28px", height: "28px", borderRadius: "6px",
+                }}
+              >
+                <IconPanelRight active={true} />
+              </button>
+            )}
             Select a project to see the concept map
           </div>
         )}

@@ -44,11 +44,13 @@ export default function AppShell() {
       <div style={{ height: "100vh", overflow: "hidden", background: "var(--bg-base)", position: "relative", display: "flex", flexDirection: "column" }}>
         <MainArea treeRef={treeRef} />
         <MobileBar
-          onMenuClick={() => setMobileSidebarOpen(true)}
-          onTreeClick={() => setMobileTreeOpen(true)}
+          onMenuClick={() => setMobileSidebarOpen(p => !p)}
+          onTreeClick={() => setMobileTreeOpen(p => !p)}
+          treeOpen={mobileTreeOpen}
+          sidebarOpen={mobileSidebarOpen}
         />
         <Drawer open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} side="left">
-          <Sidebar open={true} onToggle={() => setMobileSidebarOpen(false)} />
+          <Sidebar open={true} onToggle={() => setMobileSidebarOpen(false)} mobile={true} />
         </Drawer>
         <Drawer open={mobileTreeOpen} onClose={() => setMobileTreeOpen(false)} side="right">
           <TreePanel open={true} mobile={true} onToggle={() => setMobileTreeOpen(false)} treeRef={treeRef} />

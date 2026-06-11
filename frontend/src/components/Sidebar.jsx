@@ -136,7 +136,7 @@ function HoverItem({ isActive, onClick, title, children, disabled }) {
   )
 }
 
-export default function Sidebar({ open, onToggle }) {
+export default function Sidebar({ open, onToggle, mobile = false }) {
   const { user, logout } = useAuth()
   const { activeProjectId, setActiveProjectId, setActiveConcept, projects, setProjects, pendingName, setPendingName } = useProject()
   const { dark, toggle: toggleTheme } = useTheme()
@@ -202,6 +202,8 @@ export default function Sidebar({ open, onToggle }) {
       display: "flex", flexDirection: "column",
       transition: "width 200ms ease, min-width 200ms ease",
       overflow: "hidden", flexShrink: 0,
+      paddingBottom: mobile ? "52px" : 0,
+      boxSizing: "border-box",
     }}>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
