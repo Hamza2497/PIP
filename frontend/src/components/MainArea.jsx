@@ -620,6 +620,7 @@ export default function MainArea({ treeRef }) {
           borderBottom: "1px solid var(--border)",
           display: "flex", alignItems: "center", gap: "10px",
           flexShrink: 0, background: "var(--bg-panel)",
+          position: "sticky", top: 0, zIndex: 5,
         }}>
           <button onClick={handleBack} style={{
             background: "none", border: "none",
