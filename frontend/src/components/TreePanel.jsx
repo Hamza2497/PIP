@@ -17,7 +17,7 @@ function IconPanelRight({ active }) {
   )
 }
 
-export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle, treeRef }) {
+export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeStart, onToggle, treeRef, mobile = false }) {
   const { activeProjectId, projects } = useProject()
   const [selectedConcept, setSelectedConcept] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -32,9 +32,11 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
   }
 
   const sidebarW = sidebarOpen ? SIDEBAR_OPEN_W : SIDEBAR_CLOSED_W
-  const panelW = open
-    ? `calc((100vw - ${sidebarW}px) * ${treePct})`
-    : `${STRIP_W}px`
+  const panelW = mobile
+    ? "100vw"
+    : open
+      ? `calc((100vw - ${sidebarW}px) * ${treePct})`
+      : `${STRIP_W}px`
 
   return (
     <div style={{
@@ -44,7 +46,7 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
       display: "flex",
       flexDirection: "row",
       transition: open ? "none" : "width 200ms ease, min-width 200ms ease",
-      borderLeft: "1px solid var(--border)",
+      borderLeft: mobile ? "none" : "1px solid var(--border)",
       background: "var(--bg-panel)",
       flexShrink: 0,
       overflow: "hidden",
@@ -68,29 +70,31 @@ export default function TreePanel({ open, sidebarOpen, treePct = 0.40, onResizeS
       )}
 
       {/* ── Always-visible toggle strip ─────────────────────────────────── */}
-      <div style={{
-        width: `${STRIP_W}px`,
-        minWidth: `${STRIP_W}px`,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        paddingTop: "10px",
-      }}>
-        <button
-          onClick={onToggle}
-          title={open ? "Close concept tree" : "Open concept tree"}
-          aria-label={open ? "Close concept tree" : "Open concept tree"}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: open ? "var(--text-primary)" : "var(--text-muted)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: "28px", height: "28px", borderRadius: "6px",
-            transition: "color 150ms ease",
-          }}
-        >
-          <IconPanelRight active={open} />
-        </button>
-      </div>
+      {!mobile && (
+        <div style={{
+          width: `${STRIP_W}px`,
+          minWidth: `${STRIP_W}px`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: "10px",
+        }}>
+          <button
+            onClick={onToggle}
+            title={open ? "Close concept tree" : "Open concept tree"}
+            aria-label={open ? "Close concept tree" : "Open concept tree"}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: open ? "var(--text-primary)" : "var(--text-muted)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: "28px", height: "28px", borderRadius: "6px",
+              transition: "color 150ms ease",
+            }}
+          >
+            <IconPanelRight active={open} />
+          </button>
+        </div>
+      )}
 
       {/* ── Tree content ─────────────────────────────────────────────────── */}
       <div style={{

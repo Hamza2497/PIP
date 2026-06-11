@@ -41,7 +41,7 @@ export default function AppShell() {
 
   if (isMobile) {
     return (
-      <div style={{ height: "100vh", overflow: "hidden", background: "var(--bg-base)", position: "relative" }}>
+      <div style={{ height: "100vh", overflow: "hidden", background: "var(--bg-base)", position: "relative", display: "flex", flexDirection: "column" }}>
         <MainArea treeRef={treeRef} />
         <MobileBar
           onMenuClick={() => setMobileSidebarOpen(true)}
@@ -51,7 +51,7 @@ export default function AppShell() {
           <Sidebar open={true} onToggle={() => setMobileSidebarOpen(false)} />
         </Drawer>
         <Drawer open={mobileTreeOpen} onClose={() => setMobileTreeOpen(false)} side="right">
-          <TreePanel open={true} sidebarOpen={true} treePct={0.40} onToggle={() => setMobileTreeOpen(false)} treeRef={treeRef} />
+          <TreePanel open={true} mobile={true} onToggle={() => setMobileTreeOpen(false)} treeRef={treeRef} />
         </Drawer>
       </div>
     )

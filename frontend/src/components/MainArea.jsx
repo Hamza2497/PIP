@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { api, parseSse } from "../api"
 import { useProject } from "../context/ProjectContext"
+import { useMediaQuery } from "../hooks/useMediaQuery"
 import RoadmapView from "./main/RoadmapView"
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
@@ -337,6 +338,7 @@ export default function MainArea({ treeRef }) {
 
   const scrollRef   = useRef(null)
   const textareaRef = useRef(null)
+  const isMobile    = useMediaQuery("(max-width: 767px)")
 
   // Reset checkpoint state when concept changes
   useEffect(() => {
@@ -608,7 +610,10 @@ export default function MainArea({ treeRef }) {
   }
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{
+      flex: 1, display: "flex", flexDirection: "column", overflow: "hidden",
+      paddingBottom: isMobile ? "52px" : 0,
+    }}>
 
       {/* Checkpoint header */}
       {isCheckpoint && (
