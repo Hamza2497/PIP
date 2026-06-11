@@ -1,19 +1,35 @@
 const API_BASE = import.meta.env.VITE_API_URL || "https://pip-q2vi.onrender.com"
+const TOKEN_KEY = "pip:token"
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token) {
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
+}
 
 function signalUnauthorized() {
   window.dispatchEvent(new CustomEvent("pip:unauthorized"))
 }
 
+function authHeaders(extra = {}) {
+  const token = getToken()
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra
+}
+
 async function apiFetch(path, opts = {}) {
-  const headers = { "Content-Type": "application/json", ...opts.headers }
-  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers, credentials: "include" })
+  const headers = authHeaders({ "Content-Type": "application/json", ...opts.headers })
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers })
   if (res.status === 401) { signalUnauthorized(); throw new Error("Session expired") }
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
 
 async function streamFetch(path, opts = {}) {
-  const res = await fetch(`${API_BASE}${path}`, { ...opts, credentials: "include" })
+  const headers = authHeaders(opts.headers)
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers })
   if (res.status === 401) { signalUnauthorized(); throw new Error("Session expired") }
   return res
 }
@@ -38,10 +54,16 @@ export async function* parseSse(response) {
 }
 
 export const api = {
-  googleAuth: (credential) =>
-    apiFetch("/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
+  googleAuth: async (credential) => {
+    const user = await apiFetch("/auth/google", { method: "POST", body: JSON.stringify({ credential }) })
+    setToken(user.token)
+    return user
+  },
   getMe: () => apiFetch("/me"),
-  logout: () => apiFetch("/auth/logout", { method: "POST" }).catch(() => {}),
+  logout: () => {
+    setToken(null)
+    return apiFetch("/auth/logout", { method: "POST" }).catch(() => {})
+  },
   getProjects: () => apiFetch("/projects"),
   cloneDemo: () => apiFetch("/demo/clone", { method: "POST" }),
   createRoadmap: (plan) =>

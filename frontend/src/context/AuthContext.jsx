@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
-import { api } from "../api"
+import { api, getToken, setToken } from "../api"
 
 const AuthContext = createContext(null)
 
@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!getToken()) { setLoading(false); return }
     api.getMe()
       .then(data => setUser(data))
       .catch(() => setUser(null))
@@ -15,7 +16,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    const handle = () => setUser(null)
+    const handle = () => { setToken(null); setUser(null) }
     window.addEventListener("pip:unauthorized", handle)
     return () => window.removeEventListener("pip:unauthorized", handle)
   }, [])

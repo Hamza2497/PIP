@@ -22,7 +22,12 @@ def create_session_token(user_id: str) -> str:
 
 
 async def get_current_user(request: Request, session: AsyncSession = Depends(get_db)) -> User:
-    token = request.cookies.get("session")
+    token = None
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header[len("bearer "):]
+    if token is None:
+        token = request.cookies.get("session")
     if token is None:
         raise HTTPException(status_code=401)
 

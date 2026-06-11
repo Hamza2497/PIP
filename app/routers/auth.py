@@ -48,16 +48,7 @@ async def google_auth(body: GoogleCredentialRequest):
 
         token = create_session_token(str(user.id))
 
-        response = JSONResponse({"id": str(user.id), "email": user.email, "name": user.name})
-        response.set_cookie(
-            "session",
-            token,
-            httponly=True,
-            samesite="none",
-            secure=True,
-            max_age=60 * 60 * 24 * 7,
-        )
-        return response
+        return {"id": str(user.id), "email": user.email, "name": user.name, "token": token}
 
 
 @router.post("/auth/logout")
