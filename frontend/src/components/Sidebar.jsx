@@ -374,7 +374,23 @@ export default function Sidebar({ open, onToggle }) {
         })}
         {projects.length === 0 && open && (
           <p style={{ fontSize:"11px", color:"var(--text-dim)", padding:"10px 7px", lineHeight:"1.5" }}>
-            No projects yet.<br/>Create one above.
+            No projects yet.<br/>Create one above, or{" "}
+            <button
+              onClick={async () => {
+                const { project_id } = await api.cloneDemo()
+                const updated = await api.getProjects()
+                setProjects(updated)
+                setActiveProjectId(project_id)
+                setActiveConcept(null)
+              }}
+              style={{
+                background:"none", border:"none", padding:0,
+                color:"var(--accent-blue)", cursor:"pointer",
+                fontSize:"11px", textDecoration:"underline",
+              }}
+            >
+              try the demo
+            </button>.
           </p>
         )}
       </div>

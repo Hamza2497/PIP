@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 
@@ -26,6 +27,10 @@ from app.utils.graph import topological_sort
 from app.utils.prereq_graph import PrerequisiteGraph
 
 router = APIRouter()
+
+# Template project (Hamza's account) cloned for "Try Demo".
+DEMO_TEMPLATE_PROJECT_ID = "e5414509-fbf2-4a0a-a0de-6b6cd5846872"
+DEMO_PROJECT_NAME = "Expense Tracker (Demo)"
 
 
 class RoadmapRequest(BaseModel):
@@ -63,6 +68,67 @@ async def get_projects(
         })
 
     return projects
+
+
+@router.post("/demo/clone")
+async def clone_demo_project(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    # Idempotent: return the existing demo project if this user already has one.
+    result = await session.execute(
+        select(Project).where(Project.user_id == user.id, Project.name == DEMO_PROJECT_NAME)
+    )
+    existing = result.scalar_one_or_none()
+    if existing is not None:
+        return {"project_id": str(existing.id)}
+
+    result = await session.execute(select(Project).where(Project.id == DEMO_TEMPLATE_PROJECT_ID))
+    template = result.scalar_one_or_none()
+    if template is None:
+        raise HTTPException(status_code=500, detail="Demo template project not found")
+
+    result = await session.execute(
+        select(ProjectConcept)
+        .where(ProjectConcept.project_id == template.id)
+        .order_by(ProjectConcept.order_index)
+    )
+    template_pcs = result.scalars().all()
+
+    project = Project(
+        user_id=user.id,
+        stack_id=template.stack_id,
+        name=DEMO_PROJECT_NAME,
+        plan=template.plan,
+        status="active",
+    )
+    session.add(project)
+    await session.flush()
+
+    pc_id_map: dict[str, str] = {}
+    for tpc in template_pcs:
+        pc = ProjectConcept(
+            project_id=project.id,
+            concept_id=tpc.concept_id,
+            order_index=tpc.order_index,
+            what_to_build=tpc.what_to_build,
+            phase=ConceptPhase.PENDING,
+        )
+        session.add(pc)
+        await session.flush()
+        pc_id_map[str(tpc.id)] = str(pc.id)
+
+    annotated = copy.deepcopy(template.annotated_plan) if template.annotated_plan else None
+    if annotated:
+        for step in annotated:
+            for part in step.get("parts", []):
+                old_id = part.get("project_concept_id")
+                if old_id in pc_id_map:
+                    part["project_concept_id"] = pc_id_map[old_id]
+    project.annotated_plan = annotated
+
+    await session.commit()
+    return {"project_id": str(project.id)}
 
 
 @router.get("/project/{project_id}")

@@ -43,6 +43,7 @@ export const api = {
   getMe: () => apiFetch("/me"),
   logout: () => apiFetch("/auth/logout", { method: "POST" }).catch(() => {}),
   getProjects: () => apiFetch("/projects"),
+  cloneDemo: () => apiFetch("/demo/clone", { method: "POST" }),
   createRoadmap: (plan) =>
     apiFetch("/roadmap", { method: "POST", body: JSON.stringify({ plan }) }),
   getProject: (id) => apiFetch(`/project/${id}`),
