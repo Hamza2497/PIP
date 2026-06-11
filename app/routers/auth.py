@@ -53,7 +53,8 @@ async def google_auth(body: GoogleCredentialRequest):
             "session",
             token,
             httponly=True,
-            samesite="lax",
+            samesite="none",
+            secure=True,
             max_age=60 * 60 * 24 * 7,
         )
         return response
@@ -62,7 +63,7 @@ async def google_auth(body: GoogleCredentialRequest):
 @router.post("/auth/logout")
 def logout():
     response = JSONResponse({"status": "logged out"})
-    response.delete_cookie("session")
+    response.delete_cookie("session", samesite="none", secure=True)
     return response
 
 
@@ -96,7 +97,8 @@ async def callback(code: str):
             "session",
             token,
             httponly=True,
-            samesite="lax",
+            samesite="none",
+            secure=True,
             max_age=60 * 60 * 24 * 7,
         )
         return response

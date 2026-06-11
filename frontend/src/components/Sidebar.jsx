@@ -146,7 +146,10 @@ export default function Sidebar({ open, onToggle }) {
   const [deleting, setDeleting] = useState(false)
   const inputRef = useRef(null)
 
-  useEffect(() => { api.getProjects().then(setProjects).catch(console.error) }, [setProjects])
+  useEffect(() => {
+    if (!user) return
+    api.getProjects().then(setProjects).catch(() => {})
+  }, [user, setProjects])
   useEffect(() => { if (creating) inputRef.current?.focus() }, [creating])
 
   const handleCreate = (e) => {
