@@ -180,11 +180,14 @@ export default function LandingPage() {
   const { dark, toggle: toggleTheme } = useTheme()
   const [scrolled, setScrolled] = useState(false)
   const [signingIn, setSigningIn] = useState(false)
+  const scrollRef = useRef(null)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => setScrolled(el.scrollTop > 24)
+    el.addEventListener("scroll", onScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onScroll)
   }, [])
 
   const handleSuccess = useCallback(async ({ credential }) => {
@@ -205,8 +208,10 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
+    <div ref={scrollRef} style={{
+      height: "100vh",
+      overflowY: "auto",
+      WebkitOverflowScrolling: "touch",
       background: "var(--bg-base)",
       display: "flex",
       flexDirection: "column",
