@@ -2,32 +2,65 @@
 
 PIP is a learning companion for developers building real projects with AI assistance. Describe what you're building, and PIP maps out the concepts behind it as a visual tree, then teaches you through each one — one checkpoint at a time, as you go.
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-pip--sandy.vercel.app-58a6ff?style=flat&logo=vercel)](https://pip-sandy.vercel.app/)
+
+---
+
 ## What it does
 
-- **Generates a concept tree** from your project plan — breaking your build into the underlying concepts you need to understand (not just steps to follow)
+- **Generates a concept tree from your project plan** — breaking your build into the underlying concepts you need to understand (not just steps to follow)
 - **Teaches through checkpoints** — for each concept, PIP orients you, then checks your understanding through a short conversational exchange before marking it complete
-- **Tracks your progress** visually — an interactive canvas tree shows prerequisites, dependencies, and what's been covered
+- **Tracks your progress visually** — an interactive canvas tree shows prerequisites, dependencies, and what's been covered
 - **Avoids redundant teaching** — concepts are deduplicated across your project using semantic similarity, so you're not re-taught the same thing under a different name
 - **Resumes where you left off** — re-enter any concept and PIP picks up the conversation with full context of what you've already built
 
+---
+
+## How it works
+
+PIP works in two steps:
+
+**1. Plan** — describe your project. Gemini generates a concept tree, deduplicated against everything you've already learned (via pgvector embedding similarity), and renders it on an interactive canvas.
+
+**2. Learn** — click into any concept. PIP teaches it, then checks your understanding through a short Q&A. Gemini evaluates your answer, and the concept is marked complete on the tree.
+
+```
+ You describe a project
+          │
+          ▼
+ ┌─────────────────────────┐
+ │  Gemini: generate concept │
+ │  tree + dedupe via         │
+ │  pgvector embeddings       │
+ └────────────┬────────────┘
+              ▼
+   Interactive canvas tree
+   (prerequisites, progress)
+              │
+              ▼
+   Click a concept ──► PIP teaches it ──► checkpoint Q&A
+                                              │
+                                              ▼
+                                  Gemini evaluates answer
+                                              │
+                                              ▼
+                                  Concept marked complete
+```
+
+---
+
 ## Tech stack
 
-**Backend**
-- FastAPI (async)
-- SQLAlchemy (async) + Alembic migrations
-- PostgreSQL with `pgvector` for concept embedding similarity/deduplication
-- Google Gemini for roadmap generation, concept generation, and checkpoint evaluation
-- Google OAuth for authentication
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python · FastAPI (async) · SQLAlchemy (async) · Alembic |
+| Database | PostgreSQL + pgvector (concept embedding similarity / dedup) |
+| AI | Google Gemini — roadmap generation, concept generation, checkpoint evaluation |
+| Auth | Google OAuth |
+| Frontend | React · Vite · custom canvas-based concept tree · Server-Sent Events |
+| DevOps | Docker (backend, Render) · Render PostgreSQL (pgvector enabled) · Vercel (frontend) |
 
-**Frontend**
-- React + Vite
-- Canvas-based interactive concept tree (custom 2D rendering)
-- Server-Sent Events (SSE) for streaming roadmap generation
-
-**Infrastructure**
-- Backend: Dockerized, deployed on Render
-- Database: Render PostgreSQL (pgvector enabled)
-- Frontend: Vercel
+---
 
 ## Architecture
 
@@ -45,6 +78,8 @@ PIP is a learning companion for developers building real projects with AI assist
                       │   evaluation)     │
                       └──────────────────┘
 ```
+
+---
 
 ## Local development
 
@@ -81,12 +116,12 @@ npm run dev
 
 The frontend dev server runs on `http://localhost:5173` and proxies API requests to `http://localhost:8000` (configured in `vite.config.js`).
 
-## Environment variables
+### Environment variables
 
-### Backend (`.env`)
+**Backend (`.env`)**
 
 | Variable | Description |
-|---|---|
+|----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string (use `postgresql+asyncpg://`) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
@@ -94,19 +129,34 @@ The frontend dev server runs on `http://localhost:5173` and proxies API requests
 | `SECRET_KEY` | Secret key for session/token signing |
 | `FRONTEND_URL` | URL of the frontend (used for OAuth redirects/CORS) |
 
-### Frontend (`.env`)
+**Frontend (`.env`)**
 
 | Variable | Description |
-|---|---|
+|----------|-------------|
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID (same as backend) |
+
+---
 
 ## Deployment
 
-The backend is deployed as a Docker container on Render, alongside a managed PostgreSQL instance with `pgvector` enabled. The frontend is deployed on Vercel, with `vercel.json` rewrites proxying API routes (`/auth`, `/me`, `/projects`, `/project`, `/roadmap`, `/checkpoint`) to the Render backend, plus a catch-all rewrite to support client-side routing.
+| Service | Platform | URL |
+|---------|----------|-----|
+| Frontend | Vercel | [pip-sandy.vercel.app](https://pip-sandy.vercel.app/) |
+| Backend API | Render (Docker) | — |
+| Database | Render PostgreSQL (pgvector) | — |
+
+`vercel.json` rewrites proxy API routes (`/auth`, `/me`, `/projects`, `/project`, `/roadmap`, `/checkpoint`) to the Render backend, plus a catch-all rewrite for client-side routing.
 
 Both Google OAuth client IDs (frontend and backend) must have the deployed frontend URL registered as an authorized origin, and the backend's `/auth/callback` URL registered as an authorized redirect URI.
 
+---
+
 ## Project status
 
-PIP is an active personal project. Planned next steps include an MCP server mode for use directly from the terminal during AI-assisted development, with a live local concept tree viewer.
-```
+PIP v1 is live. Planned next steps include an MCP server mode for use directly from the terminal during AI-assisted development, with a live local concept tree viewer.
+
+---
+
+## Author
+
+**Hamza Assaf** — [hamza2497.github.io](https://hamza2497.github.io) · [LinkedIn](https://linkedin.com/in/hamzah-assaf)
