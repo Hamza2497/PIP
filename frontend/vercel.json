@@ -1,11 +1,5 @@
 {
   "rewrites": [
-    { "source": "/auth/:path*", "destination": "https://pip-q2vi.onrender.com/auth/:path*" },
-    { "source": "/me", "destination": "https://pip-q2vi.onrender.com/me" },
-    { "source": "/projects/:path*", "destination": "https://pip-q2vi.onrender.com/projects/:path*" },
-    { "source": "/project/:path*", "destination": "https://pip-q2vi.onrender.com/project/:path*" },
-    { "source": "/roadmap/:path*", "destination": "https://pip-q2vi.onrender.com/roadmap/:path*" },
-    { "source": "/checkpoint/:path*", "destination": "https://pip-q2vi.onrender.com/checkpoint/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

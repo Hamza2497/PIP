@@ -1,17 +1,19 @@
+const API_BASE = import.meta.env.VITE_API_URL || "https://pip-q2vi.onrender.com"
+
 function signalUnauthorized() {
   window.dispatchEvent(new CustomEvent("pip:unauthorized"))
 }
 
 async function apiFetch(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...opts.headers }
-  const res = await fetch(path, { ...opts, headers, credentials: "include" })
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers, credentials: "include" })
   if (res.status === 401) { signalUnauthorized(); throw new Error("Session expired") }
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
 
 async function streamFetch(path, opts = {}) {
-  const res = await fetch(path, { ...opts, credentials: "include" })
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, credentials: "include" })
   if (res.status === 401) { signalUnauthorized(); throw new Error("Session expired") }
   return res
 }
