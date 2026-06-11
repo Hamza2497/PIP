@@ -350,18 +350,17 @@ export default function LandingPage() {
               Signing in…
             </div>
           ) : (
-            <div style={{ width:"240px", height:"44px", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ transform:"scale(0.85)", transformOrigin:"center" }}>
-                <GoogleLogin
-                  onSuccess={handleSuccess}
-                  onError={() => console.error("Google login error")}
-                  theme="filled_black"
-                  size="large"
-                  text="continue_with"
-                  shape="pill"
-                  locale="en"
-                />
-              </div>
+            <div style={{ width:"240px", height:"44px", borderRadius:"99px", overflow:"hidden", background:"#fff" }}>
+              <GoogleLogin
+                onSuccess={handleSuccess}
+                onError={() => console.error("Google login error")}
+                theme="outline"
+                size="large"
+                text="continue_with"
+                shape="pill"
+                width="240"
+                locale="en"
+              />
             </div>
           )}
         </div>
