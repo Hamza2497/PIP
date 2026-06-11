@@ -359,6 +359,7 @@ export default function MainArea({ treeRef }) {
   // Start orient for PENDING concepts; resume from build journal otherwise
   useEffect(() => {
     if (!activeConcept) return
+    treeRef?.current?.selectNode(activeConcept.id)
     if (activeConcept.phase?.toUpperCase() === "PENDING") {
       startOrient()
     } else {
@@ -605,6 +606,7 @@ export default function MainArea({ treeRef }) {
   const handleBack = () => {
     setActiveConcept(null)
     setRoadmapKey(k => k + 1)
+    treeRef?.current?.selectNode(null)
   }
 
   return (

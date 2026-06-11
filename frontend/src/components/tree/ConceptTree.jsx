@@ -113,6 +113,12 @@ export const ConceptTree = forwardRef(function ConceptTree({ projectId, onNodeSe
     setHoveredNode(conceptId) {
       stateRef.current.hovId = conceptId ?? null
     },
+    selectNode(conceptId) {
+      const s = stateRef.current
+      const node = s.nodes.find(n => n.id === conceptId) ?? null
+      s.selId = node?.id ?? null
+      onNodeSelect?.(node)
+    },
   }))
 
   // Keep stateRef in sync with theme so the draw loop picks it up immediately
